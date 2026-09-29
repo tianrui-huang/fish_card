@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>潮汐卡牌 · 海洋对决</title><link rel="stylesheet" href="/app.css"></head>
+<body>
+  <div class="site-shell">
+    <header class="topbar"><div class="brand"><span class="brand-mark">◈</span><div><strong>潮汐卡牌</strong><small>OCEAN DUEL · 初版</small></div></div><div id="room-chip" class="room-chip"></div><div class="top-actions"><span id="connection" class="connection">未连接</span><button id="rules-button" class="ghost small">玩法说明</button></div></header>
+    <main id="app"></main>
+    <footer class="footer">原创界面与卡面概念 · 当前牌池与规则仍可调整</footer>
+  </div>
+  <div id="toast" class="toast" role="status"></div>
+  <dialog id="rules"><form method="dialog"><button class="dialog-close" aria-label="关闭">×</button></form><h2>玩法速览</h2><p>两人各随机获得六张牌。猜拳败者先摆三张，胜者看后摆三张并先行动。</p><p>每回合获得一点行动点。上牌和一次性牌免费；攻击与大多数主动技能消耗一点，耗尽后自动换人。主动连续弃权两次判负。</p><p>各有前后两排，每排两格。前排能攻击对方前后排；后排只能攻击对方前排。睡眠中的牌不能行动，也不能被攻击。</p><p>企鹅挡伤会暂停结算，等待防守方选择。海星可复活双方弃牌堆的牌；翻车鱼和螃蟹可消耗最后一点生命发动技能。</p><p>点击己方牌查看技能；点击手牌选择上场或一次性效果。</p><p class="muted">暂定：已知八种牌各一张组成牌池，随机抽六张；无摸牌。后续规则可以继续补充。</p></dialog>
+  <script type="module" src="/app.js"></script>
+</body></html>
