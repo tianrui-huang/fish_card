@@ -4,13 +4,9 @@ const connection = document.querySelector('#connection');
 const toast = document.querySelector('#toast');
 const sessionKey = 'tide-card-session';
 const serverModeKey = 'tide-server-mode', serverUrlKey = 'tide-server-url';
-const standaloneFile = window.location.protocol === 'file:';
-const stored = (storage, key) => { try { return window[storage].getItem(key); } catch { return null; } };
-const remember = (storage, key, value) => { try { window[storage].setItem(key, value); } catch {} };
-const forget = (storage, key) => { try { window[storage].removeItem(key); } catch {} };
-let token = stored('sessionStorage', sessionKey), state = null, intent = null, chosenHand = null, eventSource = null, toastTimer, fxTimer;
-let serverMode = standaloneFile ? 'custom' : stored('localStorage', serverModeKey) || 'current';
-let customServerUrl = stored('localStorage', serverUrlKey) || '';
+let token = sessionStorage.getItem(sessionKey), state = null, intent = null, chosenHand = null, eventSource = null, toastTimer, fxTimer;
+let serverMode = localStorage.getItem(serverModeKey) || 'current';
+let customServerUrl = localStorage.getItem(serverUrlKey) || '';
 let effects = { hit:new Map(), heal:new Set(), attack:new Set(), sleep:new Set(), dead:new Map(), targeting:new Set() };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cardData = type => state?.cards?.[type] || ({sloth:{name:'树懒',kind:'dual',hp:2,text:'使一张敌方牌睡眠；一次性可使一排睡眠。'},starfish:{name:'海星',kind:'once',text:'从双方弃牌堆复活一张牌。'},seahorse:{name:'海马',kind:'once',text:'夺取敌方牌，或盲抽一张手牌。'},urchin:{name:'海胆',kind:'unit',hp:2,text:'受伤时反弹1点伤害。'},sunfish:{name:'翻车鱼',kind:'unit',hp:3,text:'消耗1生命为友方牌恢复1生命，可因此退场。'},shark:{name:'鲨鱼',kind:'unit',hp:2,text:'攻击一排；击杀后追击。'},crab:{name:'螃蟹',kind:'unit',hp:2,text:'消耗1生命获得1行动点，可因此退场。'},penguin:{name:'企鹅',kind:'unit',hp:3,text:'对方回合替友方牌挡伤。'}})[type];
@@ -39,7 +35,7 @@ async function post(url, body) {
 }
 function notify(message) { toast.textContent=message; toast.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>toast.classList.remove('show'),2700); }
 function apiRoot(){
-  if(serverMode==='current'&&!standaloneFile)return window.location.origin;
+  if(serverMode==='current')return window.location.origin;
   const raw=customServerUrl.trim();
   if(!raw)throw Error('请填写服务端地址。');
   let url;try{url=new URL(raw);}catch{throw Error('请填写完整服务端网址，例如 https://game.example.com。');}
@@ -50,7 +46,7 @@ function apiRoot(){
 function saveServerSettings(){
   serverMode=document.querySelector('#server-mode')?.value||serverMode;
   const input=document.querySelector('#server-url');if(input)customServerUrl=input.value.trim();
-  remember('localStorage',serverModeKey,serverMode);remember('localStorage',serverUrlKey,customServerUrl);
+  localStorage.setItem(serverModeKey,serverMode);localStorage.setItem(serverUrlKey,customServerUrl);
 }
 async function send(action) { try { await post('/api/action',{token,action}); intent=null; chosenHand=null; render(); } catch(e){notify(e.message);} }
 function stopEvents(){ if(eventSource){eventSource.close();eventSource=null;} }
@@ -80,18 +76,18 @@ function applyState(next) {
   state=next;render();
 }
 function connect(t) {
-  token=t;remember('sessionStorage',sessionKey,t);stopEvents();connection.textContent='正在连接';
-  let base;try{base=apiRoot();}catch(e){notify(e.message);forget('sessionStorage',sessionKey);token=null;state=null;render();return;}
+  token=t;sessionStorage.setItem(sessionKey,t);stopEvents();connection.textContent='正在连接';
+  let base;try{base=apiRoot();}catch(e){notify(e.message);sessionStorage.removeItem(sessionKey);token=null;state=null;render();return;}
   fetch(`${base}/api/state?token=${encodeURIComponent(t)}`).then(async r=>{if(!r.ok)throw Error('房间已失效或服务端地址不可用。');applyState(await r.json());
     eventSource=new EventSource(`${base}/api/events?token=${encodeURIComponent(t)}`);
     eventSource.onopen=()=>connection.textContent='已连接';eventSource.onerror=()=>connection.textContent='重新连接中';
     eventSource.onmessage=e=>applyState(JSON.parse(e.data));
-  }).catch(()=>{forget('sessionStorage',sessionKey);token=null;state=null;render();});
+  }).catch(()=>{sessionStorage.removeItem(sessionKey);token=null;state=null;render();});
 }
 function lobby() {
-  roomChip.textContent='';connection.textContent=standaloneFile?'客户端就绪':'本机运行';
+  roomChip.textContent='';connection.textContent='本机运行';
   const custom=serverMode==='custom';
-  app.innerHTML=`<section class="lobby"><div class="hero"><div class="hero-eyebrow">TWO PLAYER CARD BATTLE</div><h1>海底见，<br><span>手底见真章。</span></h1><p>把熟悉的海洋生物卡牌搬上桌。排兵布阵、交换生命、抓住对手的空档——潮汐正在改变。</p><div class="hero-art"><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span><div class="float-card">${art('penguin')}</div><div class="float-card">${art('shark')}</div></div></div><div class="lobby-panel"><h2>开始对局</h2><p>${standaloneFile?'独立客户端无需安装 Node。填写游戏服务端地址，再通过房间号会合。':'两位玩家选择同一台游戏服务端，再通过房间号会合。'}</p><label class="field-label" for="server-mode">连接到</label><select id="server-mode" class="text-input">${standaloneFile?'':`<option value="current" ${!custom?'selected':''}>当前页面的服务端</option>`}<option value="custom" ${custom?'selected':''}>自定义游戏服务端</option></select><div id="server-address-wrap" ${custom?'':'hidden'}><label class="field-label" for="server-url">服务端网址</label><input id="server-url" class="text-input" type="url" placeholder="https://服务器IP 或域名" value="${esc(customServerUrl)}"><p class="server-hint">填写完整网址，例如 http://服务器IP:8080；启用 HTTPS 后填写 https://服务器IP。</p></div><label class="field-label" for="name">你的名字</label><input id="name" class="text-input" maxlength="16" placeholder="输入昵称" value="玩家"><button id="create" class="primary full" style="margin-top:15px">创建新房间</button><div class="divider">或者加入朋友的房间</div><div class="join-row"><input id="code" class="text-input" maxlength="6" placeholder="六位房间号"><button id="join" class="secondary">加入房间</button></div><p class="lobby-note">牌池目前包含八种已知卡各一张；卡牌数量和后续规则可继续调整。</p></div></section>`;
+  app.innerHTML=`<section class="lobby"><div class="hero"><div class="hero-eyebrow">TWO PLAYER CARD BATTLE</div><h1>海底见，<br><span>手底见真章。</span></h1><p>把熟悉的海洋生物卡牌搬上桌。排兵布阵、交换生命、抓住对手的空档——潮汐正在改变。</p><div class="hero-art"><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span><div class="float-card">${art('penguin')}</div><div class="float-card">${art('shark')}</div></div></div><div class="lobby-panel"><h2>开始对局</h2><p>两位玩家选择同一台游戏服务端，再通过房间号会合。</p><label class="field-label" for="server-mode">连接到</label><select id="server-mode" class="text-input"><option value="current" ${!custom?'selected':''}>当前页面的服务端</option><option value="custom" ${custom?'selected':''}>自定义公网服务端</option></select><div id="server-address-wrap" ${custom?'':'hidden'}><label class="field-label" for="server-url">服务端网址</label><input id="server-url" class="text-input" type="url" placeholder="https://game.example.com" value="${esc(customServerUrl)}"><p class="server-hint">填写完整网址，公网地址建议使用 HTTPS。</p></div><label class="field-label" for="name">你的名字</label><input id="name" class="text-input" maxlength="16" placeholder="输入昵称" value="玩家"><button id="create" class="primary full" style="margin-top:15px">创建新房间</button><div class="divider">或者加入朋友的房间</div><div class="join-row"><input id="code" class="text-input" maxlength="6" placeholder="六位房间号"><button id="join" class="secondary">加入房间</button></div><p class="lobby-note">牌池目前包含八种已知卡各一张；卡牌数量和后续规则可继续调整。</p></div></section>`;
 }
 const me=()=>state.players[state.you], foe=()=>state.players[1-state.you];
 function isMyTurn(){return state.phase==='battle'&&state.turn===state.you&&!state.pending;}
@@ -182,7 +178,7 @@ function handleSlot(el){
   if(chosenHand&&(['place','actor'].includes(intent?.kind)||state.phase==='setup')){void send({type:'place',cardId:chosenHand,slot});return;}
 }
 function leaveGame(){
-  stopEvents();clearTimeout(fxTimer);forget('sessionStorage',sessionKey);
+  stopEvents();clearTimeout(fxTimer);sessionStorage.removeItem(sessionKey);
   token=null;state=null;intent=null;chosenHand=null;
   effects={hit:new Map(),heal:new Set(),attack:new Set(),sleep:new Set(),dead:new Map(),targeting:new Set()};
   render();
@@ -215,7 +211,7 @@ app.addEventListener('click',async e=>{
   if(e.target.closest('#join')){try{saveServerSettings();const r=await post('/api/join',{name:document.querySelector('#name').value,code:document.querySelector('#code').value});connect(r.token);}catch(err){notify(err.message);}}
 });
 app.addEventListener('change',e=>{
-  if(e.target.id==='server-mode'){serverMode=e.target.value;remember('localStorage',serverModeKey,serverMode);render();}
-  if(e.target.id==='server-url'){customServerUrl=e.target.value.trim();remember('localStorage',serverUrlKey,customServerUrl);}
+  if(e.target.id==='server-mode'){serverMode=e.target.value;localStorage.setItem(serverModeKey,serverMode);render();}
+  if(e.target.id==='server-url'){customServerUrl=e.target.value.trim();localStorage.setItem(serverUrlKey,customServerUrl);}
 });
 if(token)connect(token);else lobby();
