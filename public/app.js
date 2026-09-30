@@ -160,7 +160,17 @@ function setupScreen(){
 }
 function rpsScreen(){
   const waiting=me().rpsReady;
-  app.innerHTML=`<section class="center-state"><div class="hero-eyebrow">WHO GOES FIRST?</div><h2>${waiting?'等对手出拳':'猜拳决定先后手'}</h2><p>${waiting?'你已经出拳，等另一位玩家。':'输家先摆三张牌，赢家后摆并先行动。'}${!waiting?'你也可以浏览一下手牌：':''}</p>${!waiting?`<div class="rps-row"><button class="secondary" data-rps="rock">✊ 石头</button><button class="secondary" data-rps="paper">✋ 布</button><button class="secondary" data-rps="scissors">✌ 剪刀</button></div>`:''}<p class="muted">${me().hand.map(c=>esc(cardData(c.type).name)).join('　·　')}</p></section>`;
+  app.innerHTML=`<section class="center-state pregame-state"><div class="hero-eyebrow">WHO GOES FIRST?</div><h2>${waiting?'等对手出拳':'猜拳决定先后手'}</h2><p>${waiting?'你已经出拳，等另一位玩家。':'输家先摆三张牌，赢家后摆并先行动。'}</p>${!waiting?`<div class="rps-row"><button class="secondary" data-rps="rock">✊ 石头</button><button class="secondary" data-rps="paper">✋ 布</button><button class="secondary" data-rps="scissors">✌ 剪刀</button></div>`:''}${previewHandHTML()}</section>`;
+  wire();
+}
+function previewHandHTML(){
+  const selected=selectedCard(chosenHand), d=selected&&cardData(selected.type);
+  return `<section class="hand-area preview-hand" aria-label="你的手牌"><div class="hand-heading"><strong>你的手牌</strong><span>${me().hand.length} 张 · 点击查看</span></div><div class="hand-cards"><div class="hand-track">${me().hand.map(c=>cardHTML(c,{hand:true,selected:c.id===chosenHand}).replace('<div class="card ',`<div role="button" tabindex="0" aria-label="查看${esc(cardData(c.type).name)}" class="card `)).join('')}</div></div><div class="hand-preview-detail" aria-live="polite">${d?`<strong>${esc(d.name)} · ${d.hp?`生命 ${d.hp}`:'一次性牌'}</strong><p>${esc(d.text)}</p>`:'点击卡牌查看完整说明；手牌较多时可左右滚动。'}</div></section>`;
+}
+function waitingScreen(){
+  let address='';try{address=activeRoom?.server||apiRoot();}catch{}
+  app.innerHTML=`<section class="center-state pregame-state"><div class="hero-eyebrow">ROOM ${esc(state.code)}</div><h2>房间已创建</h2><p>把下面的服务端地址和房间号发给朋友，对方选择同一服务端后即可加入。</p><p class="server-address">服务端：<strong>${esc(address)}</strong></p><button id="copy" class="primary">复制联机信息</button>${previewHandHTML()}</section>`;
+  document.querySelector('#copy').onclick=()=>navigator.clipboard?.writeText(`服务端：${address}\n房间号：${state.code}`).then(()=>notify('服务端地址和房间号已复制')).catch(()=>notify(`服务端：${address}　房间号：${state.code}`));
   wire();
 }
 function locate(id,seen=new Set()){
@@ -262,11 +272,12 @@ function render(){
   const handScroll=app.querySelector('.hand-cards')?.scrollLeft ?? 0;
   roomMenuButton.hidden=!state||state.phase==='ended';
   if(!state){lobby();return;} roomChip.innerHTML=`房间 <strong>${esc(state.code)}</strong>`;
-  if(state.phase==='waiting'){let address='';try{address=activeRoom?.server||apiRoot();}catch{}app.innerHTML=`<section class="center-state"><div class="hero-eyebrow">ROOM ${esc(state.code)}</div><h2>房间已创建</h2><p>把下面的服务端地址和房间号发给朋友，对方选择同一服务端后即可加入。</p><p class="server-address">服务端：<strong>${esc(address)}</strong></p><button id="copy" class="primary">复制联机信息</button><p class="muted">你的手牌：${me().hand.map(c=>esc(cardData(c.type).name)).join(' · ')}</p></section>`;document.querySelector('#copy').onclick=()=>navigator.clipboard?.writeText(`服务端：${address}\n房间号：${state.code}`).then(()=>notify('服务端地址和房间号已复制')).catch(()=>notify(`服务端：${address}　房间号：${state.code}`));return;}
-  if(state.phase==='setup'){setupScreen();restoreHandScroll(handScroll);return;}if(state.phase==='rps'){rpsScreen();return;}battleScreen();restoreHandScroll(handScroll);
+  if(state.phase==='waiting'){waitingScreen();restoreHandScroll(handScroll);return;}
+  if(state.phase==='setup'){setupScreen();restoreHandScroll(handScroll);return;}if(state.phase==='rps'){rpsScreen();restoreHandScroll(handScroll);return;}battleScreen();restoreHandScroll(handScroll);
 }
 function chooseCard(id,owner){
   if(owner==='hand'){
+    if(state.phase==='waiting'||state.phase==='rps'){chosenHand=id;intent=null;render();return;}
     if(state.phase==='setup'&&state.setup===state.you){chosenHand=id;intent={kind:'place'};render();return;}
     if(!isMyTurn())return;chosenHand=id;intent=null;render();return;
   }
@@ -341,6 +352,7 @@ for(const id of ['room-menu-close','cancel-room-menu'])document.querySelector('#
 roomMenu.addEventListener('cancel',e=>{if(leaveBusy)e.preventDefault();});
 function wire(){
   app.querySelectorAll('[data-card]').forEach(el=>el.onclick=e=>{e.stopPropagation();chooseCard(el.dataset.card,el.dataset.owner==='hand'?'hand':'field');});
+  app.querySelectorAll('.preview-hand [data-card]').forEach(el=>el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();chooseCard(el.dataset.card,'hand');}});
   app.querySelectorAll('.slot').forEach(el=>el.onclick=()=>handleSlot(el));
   app.querySelectorAll('[data-rps]').forEach(b=>b.onclick=()=>void send({type:'rps',choice:b.dataset.rps}));
   const pass=app.querySelector('[data-pass]');if(pass)pass.onclick=()=>void send({type:'pass'});
