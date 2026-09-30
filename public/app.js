@@ -9,9 +9,12 @@ let serverMode = localStorage.getItem(serverModeKey) || 'current';
 let customServerUrl = localStorage.getItem(serverUrlKey) || '';
 let effects = { hit:new Map(), heal:new Set(), attack:new Set(), sleep:new Set(), dead:new Map(), targeting:new Set() };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const cardData = type => state?.cards?.[type] || ({sloth:{name:'树懒',kind:'dual',hp:2,text:'使一张敌方牌睡眠；一次性可使一排睡眠。'},starfish:{name:'海星',kind:'once',text:'从双方弃牌堆复活一张牌。'},seahorse:{name:'海马',kind:'once',text:'夺取敌方牌，或盲抽一张手牌。'},urchin:{name:'海胆',kind:'unit',hp:2,text:'受伤时反弹1点伤害。'},sunfish:{name:'翻车鱼',kind:'unit',hp:3,text:'消耗1生命为友方牌恢复1生命，可因此退场。'},shark:{name:'鲨鱼',kind:'unit',hp:2,text:'攻击一排；击杀后追击。'},crab:{name:'螃蟹',kind:'unit',hp:2,text:'消耗1生命获得1行动点，可因此退场。'},penguin:{name:'企鹅',kind:'unit',hp:3,text:'对方回合替友方牌挡伤。'}})[type];
+const cardData = type => state?.cards?.[type] || ({kangaroo:{name:'袋鼠',kind:'unit',hp:2,text:'腾空积累势能；落击或受伤反击。'},elephant:{name:'大象',kind:'unit',hp:3,text:'压制敌方牌；受击免费返回，主动返回耗1点。'},whale:{name:'鲸',kind:'unit',hp:2,text:'操控敌方牌执行一次耗点行动，共耗1点。'},sloth:{name:'树懒',kind:'dual',hp:2,text:'使一张敌方牌睡眠；一次性可使一排睡眠。'},starfish:{name:'海星',kind:'once',text:'从双方弃牌堆复活一张牌。'},seahorse:{name:'海马',kind:'once',text:'夺取敌方牌，或盲抽一张手牌。'},urchin:{name:'海胆',kind:'unit',hp:2,text:'受伤时反弹1点伤害。'},sunfish:{name:'翻车鱼',kind:'unit',hp:3,text:'消耗1生命为友方牌恢复1生命，可因此退场。'},shark:{name:'鲨鱼',kind:'unit',hp:2,text:'攻击一排；击杀后追击。'},crab:{name:'螃蟹',kind:'unit',hp:2,text:'消耗1生命获得1行动点，可因此退场。'},penguin:{name:'企鹅',kind:'unit',hp:3,text:'对方回合替友方牌挡伤。'}})[type];
 const art = type => {
   const shapes = {
+    kangaroo:'<path d="M82 40L77 15q10-8 14 24m18 2l8-26q12 0 2 31" fill="#cc9567" stroke="#956343" stroke-width="4"/><ellipse cx="100" cy="54" rx="24" ry="22" fill="#dcaa7a"/><ellipse cx="104" cy="78" rx="28" ry="25" fill="#b88155"/><ellipse cx="103" cy="82" rx="17" ry="14" fill="#eed2a2"/><path d="M78 73Q40 75 45 99L81 89m39-3l25 14m-53-5l-11 7" fill="none" stroke="#ad744f" stroke-width="9" stroke-linecap="round"/><circle cx="94" cy="48" r="3" fill="#233d48"/><circle cx="111" cy="48" r="3" fill="#233d48"/><path d="M100 55l5 4 5-4" fill="#835747"/>',
+    elephant:'<ellipse cx="102" cy="63" rx="42" ry="30" fill="#8da8af"/><ellipse cx="78" cy="49" rx="24" ry="27" fill="#aec3c5"/><ellipse cx="131" cy="49" rx="24" ry="27" fill="#aec3c5"/><ellipse cx="105" cy="48" rx="27" ry="29" fill="#9cb6ba"/><path d="M105 61v25q0 19 17 12" fill="none" stroke="#9cb6ba" stroke-width="13" stroke-linecap="round"/><path d="M83 76l-5 21m52-21l5 21" stroke="#78969f" stroke-width="13" stroke-linecap="round"/><path d="M86 65l-8 12m46-12l8 12" stroke="#fff0ce" stroke-width="5" stroke-linecap="round"/><circle cx="93" cy="47" r="3" fill="#23404a"/><circle cx="118" cy="47" r="3" fill="#23404a"/>',
+    whale:'<path d="M46 52q15-32 69-18 23 6 31 29l19-17 13 12-28 25q-31 23-73 5Q44 81 46 52z" fill="#638cba"/><path d="M51 70q33 23 81 3-18 26-48 17z" fill="#c6e5ec"/><path d="M99 72l-13 29 33-24" fill="#4b719e"/><circle cx="68" cy="53" r="3" fill="#122e46"/><path d="M53 66q11 8 22 1M79 30V17m-1 7l-8-10m10 8l10-9" fill="none" stroke="#c4f3f1" stroke-width="3" stroke-linecap="round"/>',
     sloth:'<path d="M55 23h91M86 26q-2 18 13 21 12-3 9-19" fill="none" stroke="#6a5645" stroke-width="6" stroke-linecap="round"/><ellipse cx="101" cy="60" rx="24" ry="29" fill="#a47d57"/><circle cx="101" cy="40" r="20" fill="#b89468"/><ellipse cx="101" cy="43" rx="12" ry="10" fill="#efe3c9"/><circle cx="96" cy="42" r="2"/><circle cx="106" cy="42" r="2"/><path d="M97 48q4 4 8 0" fill="none" stroke="#654c3b" stroke-width="2"/>',
     starfish:'<path d="M101 20l13 26 29 3-21 19 6 29-27-15-27 15 6-29-21-19 29-3z" fill="#fa8771" stroke="#d35e61" stroke-width="4"/><circle cx="94" cy="57" r="2" fill="#823f54"/><circle cx="108" cy="57" r="2" fill="#823f54"/><path d="M96 65q5 5 10 0" fill="none" stroke="#823f54" stroke-width="2"/>',
     seahorse:'<path d="M120 28q-16-13-30 0-13 12-3 26 9 12 25 4 10-5 5-14-4-6-12-1" fill="none" stroke="#efc46c" stroke-width="12" stroke-linecap="round"/><path d="M116 30q20-3 24 11l-15 7" fill="#e5ac5f"/><circle cx="132" cy="34" r="2" fill="#173d4c"/><path d="M99 54q8 12 4 23-5 12 7 15 8 2 12-5" fill="none" stroke="#d78e56" stroke-width="8" stroke-linecap="round"/><path d="M94 38l-9-8m9 16l-12 0m17 14l-9 8" stroke="#f6db89" stroke-width="3"/>',
@@ -24,10 +27,10 @@ const art = type => {
   return `<svg viewBox="0 0 202 108" aria-hidden="true"><g fill="#e1fff2" opacity=".55"><circle cx="28" cy="28" r="3"/><circle cx="170" cy="72" r="4"/><circle cx="39" cy="85" r="2"/></g>${shapes[type] || ''}</svg>`;
 };
 function cardHTML(c, {hand=false, selected=false}={}) {
-  const d=cardData(c.type), hp=d.hp && c.hp !== undefined ? `<span class="hp">♥ <strong>${c.hp}</strong>/${d.hp}</span>` : '<span class="hp">✦ 一次性</span>';
+  const d=cardData(c.type), hp=d.hp ? `<span class="hp">♥ <strong>${c.hp ?? d.hp}</strong>/${d.hp}</span>` : '<span class="hp">✦ 一次性</span>';
   const fx=[];if(effects.attack.has(c.id)){fx.push('fx-attack');const owner=state?.players?.findIndex(p=>p.field.some(x=>x?.id===c.id));fx.push(owner===state?.you?'fx-lunge-up':'fx-lunge-down');}if(effects.hit.has(c.id))fx.push('fx-hit');if(effects.heal.has(c.id))fx.push('fx-heal');if(effects.sleep.has(c.id))fx.push('fx-sleep');if(effects.targeting.has(c.id))fx.push('fx-target');
   const pop=effects.hit.has(c.id)?`<span class="combat-pop damage-pop">−${effects.hit.get(c.id)}</span>`:effects.heal.has(c.id)?'<span class="combat-pop heal-pop">+1</span>':'';
-  return `<div class="card ${selected?'selected':''} ${c.sleep?'sleeping':''} ${fx.join(' ')}" data-card="${esc(c.id)}" data-owner="${hand?'hand':'field'}"><div class="card-inner"><div class="card-head"><strong>${esc(d.name)}</strong><span class="card-kind">${d.kind==='once'?'一次性':d.kind==='dual'?'两用':'角色'}</span></div><div class="card-art">${art(c.type)}</div><div class="card-info"><div class="card-text">${esc(d.text)}</div><div class="card-foot">${hp}<span>${esc(d.suit||'海域')}</span></div></div></div>${pop}${effects.sleep.has(c.id)?'<span class="sleep-burst">Zzz</span>':''}${c.sleep?'<span class="sleep-tag">☾ 睡眠</span>':''}</div>`;
+  return `<div class="card ${selected?'selected':''} ${c.sleep?'sleeping':''} ${c.airborne?'airborne':''} ${c.suppressedBy?'suppressed':''} ${fx.join(' ')}" data-card="${esc(c.id)}" data-owner="${hand?'hand':'field'}" title="${esc(d.text)}"><div class="card-inner"><div class="card-head"><strong>${esc(d.name)}</strong><span class="card-kind">${d.kind==='once'?'一次性':d.kind==='dual'?'两用':'角色'}</span></div><div class="card-art">${art(c.type)}</div><div class="card-info"><div class="card-text">${esc(d.text)}</div><div class="card-foot">${hp}<span>${esc(d.suit||'海域')}</span></div></div></div>${pop}${effects.sleep.has(c.id)?'<span class="sleep-burst">Zzz</span>':''}<div class="state-badges">${c.sleep?'<span class="badge-sleep">☾ 睡眠</span>':''}${c.airborne?`<span class="badge-air">↑ 腾空 · 势能 ${c.gravity}/3</span>`:''}${c.suppressedBy?'<span class="badge-suppress">⛓ 压制</span>':''}${state?.covering?.some(x=>x.c.id===c.id)?`<span class="badge-cover">▼ ${state.covering.find(x=>x.c.id===c.id).p===state.you?'己方':'对方'} · 压制中</span>`:''}</div></div>`;
 }
 async function post(url, body) {
   const r=await fetch(`${apiRoot()}${url}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); const data=await r.json();
@@ -50,31 +53,32 @@ function saveServerSettings(){
 }
 async function send(action) { try { await post('/api/action',{token,action}); intent=null; chosenHand=null; render(); } catch(e){notify(e.message);} }
 function stopEvents(){ if(eventSource){eventSource.close();eventSource=null;} }
-function applyState(next) {
+function snapshotUnits(source){
+  const units=source.players.flatMap((p,owner)=>p.field.flatMap((c,s)=>c?[{p:owner,locationP:owner,s,c}]:[]));
+  const pending=[...(source.covering||[])];
+  for(let pass=0;pass<pending.length+1;pass++)for(const x of pending)if(!units.some(y=>y.c.id===x.c.id)){const base=units.find(y=>y.c.id===x.targetId);if(base)units.push({p:x.p,locationP:base.locationP,s:base.s,c:x.c});}
+  if(source.pending?.returnCard&&!units.some(x=>x.c.id===source.pending.returnCard.id))units.push({p:source.pending.respondTo,s:0,c:source.pending.returnCard});
+  return units;
+}
+function applyState(next){
   const prev=state;
   if(prev?.players?.length===2&&next?.players?.length===2&&next.version!==prev.version){
-    const find=(source,id)=>{for(let p=0;p<2;p++)for(let s=0;s<4;s++)if(source.players[p].field[s]?.id===id)return {p,s,c:source.players[p].field[s]};return null;};
-    const logs=next.log.slice(Math.max(0,next.log.length-(next.version-prev.version+3)));
-    for(let p=0;p<2;p++)for(let s=0;s<4;s++){
-      const old=prev.players[p].field[s];if(!old)continue;
-      const now=find(next,old.id);
-      if(now&&now.c.hp<old.hp)effects.hit.set(old.id,old.hp-now.c.hp);
-      else if(now&&now.c.hp>old.hp)effects.heal.add(old.id);
-      if(old.sleep===0&&now?.c.sleep>0)effects.sleep.add(old.id);
-      if(!now){
-        const inHand=next.players.some(player=>player.hand?.some(card=>card.id===old.id));
-        const inDiscard=next.players.some(player=>player.discard.some(card=>card.id===old.id));
-        if(inDiscard&&!inHand)effects.dead.set(`${p}:${s}`,cardData(old.type).name);
-      }
-      if(now&&p===prev.turn&&logs.some(line=>line.includes(`${prev.players[p].name}的${cardData(old.type).name}攻击`)||line.includes(`${prev.players[p].name}的${cardData(old.type).name}冲击`)||line.includes(`${prev.players[p].name}的${cardData(old.type).name}追击`)))effects.attack.add(old.id);
+    const before=snapshotUnits(prev),after=snapshotUnits(next),logs=next.log.slice(Math.max(0,next.log.length-(next.version-prev.version+3)));
+    for(const old of before){
+      const now=after.find(x=>x.c.id===old.c.id);
+      if(now&&now.c.hp<old.c.hp)effects.hit.set(old.c.id,old.c.hp-now.c.hp);
+      else if(now&&now.c.hp>old.c.hp)effects.heal.add(old.c.id);
+      if(!old.c.sleep&&now?.c.sleep)effects.sleep.add(old.c.id);
+      if(!now&&next.players.some(p=>p.discard.some(c=>c.id===old.c.id)))effects.dead.set(`${old.locationP??old.p}:${old.s}`,cardData(old.c.type).name);
+      if(now&&logs.some(line=>line.includes(`令${cardData(old.c.type).name}攻击`)||line.includes(`令${cardData(old.c.type).name}冲击`)||line.includes(`令${cardData(old.c.type).name}落击`)||line.includes(`${cardData(old.c.type).name}追击`)))effects.attack.add(old.c.id);
     }
     if(next.pending?.target)effects.targeting.add(next.pending.target);
-    if(effects.hit.size||effects.heal.size||effects.sleep.size||effects.dead.size||effects.attack.size||effects.targeting.size){
-      clearTimeout(fxTimer);fxTimer=setTimeout(()=>{effects={hit:new Map(),heal:new Set(),attack:new Set(),sleep:new Set(),dead:new Map(),targeting:new Set()};render();},950);
-    }
+    if(effects.hit.size||effects.heal.size||effects.sleep.size||effects.dead.size||effects.attack.size||effects.targeting.size){clearTimeout(fxTimer);fxTimer=setTimeout(()=>{effects={hit:new Map(),heal:new Set(),attack:new Set(),sleep:new Set(),dead:new Map(),targeting:new Set()};render();},950);}
+    if(next.turn!==prev.turn||next.phase!==prev.phase){intent=null;chosenHand=null;}
   }
   state=next;render();
 }
+
 function connect(t) {
   token=t;sessionStorage.setItem(sessionKey,t);stopEvents();connection.textContent='正在连接';
   let base;try{base=apiRoot();}catch(e){notify(e.message);sessionStorage.removeItem(sessionKey);token=null;state=null;render();return;}
@@ -87,7 +91,7 @@ function connect(t) {
 function lobby() {
   roomChip.textContent='';connection.textContent='本机运行';
   const custom=serverMode==='custom';
-  app.innerHTML=`<section class="lobby"><div class="hero"><div class="hero-eyebrow">TWO PLAYER CARD BATTLE</div><h1>海底见，<br><span>手底见真章。</span></h1><p>把熟悉的海洋生物卡牌搬上桌。排兵布阵、交换生命、抓住对手的空档——潮汐正在改变。</p><div class="hero-art"><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span><div class="float-card">${art('penguin')}</div><div class="float-card">${art('shark')}</div></div></div><div class="lobby-panel"><h2>开始对局</h2><p>两位玩家选择同一台游戏服务端，再通过房间号会合。</p><label class="field-label" for="server-mode">连接到</label><select id="server-mode" class="text-input"><option value="current" ${!custom?'selected':''}>当前页面的服务端</option><option value="custom" ${custom?'selected':''}>自定义公网服务端</option></select><div id="server-address-wrap" ${custom?'':'hidden'}><label class="field-label" for="server-url">服务端网址</label><input id="server-url" class="text-input" type="url" placeholder="https://game.example.com" value="${esc(customServerUrl)}"><p class="server-hint">填写完整网址，公网地址建议使用 HTTPS。</p></div><label class="field-label" for="name">你的名字</label><input id="name" class="text-input" maxlength="16" placeholder="输入昵称" value="玩家"><button id="create" class="primary full" style="margin-top:15px">创建新房间</button><div class="divider">或者加入朋友的房间</div><div class="join-row"><input id="code" class="text-input" maxlength="6" placeholder="六位房间号"><button id="join" class="secondary">加入房间</button></div><p class="lobby-note">牌池目前包含八种已知卡各一张；卡牌数量和后续规则可继续调整。</p></div></section>`;
+  app.innerHTML=`<section class="lobby"><div class="hero"><div class="hero-eyebrow">TWO PLAYER CARD BATTLE</div><h1>海底见，<br><span>手底见真章。</span></h1><p>把熟悉的海洋生物卡牌搬上桌。排兵布阵、交换生命、抓住对手的空档——潮汐正在改变。</p><div class="hero-art"><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span><div class="float-card">${art('penguin')}</div><div class="float-card">${art('shark')}</div></div></div><div class="lobby-panel"><h2>开始对局</h2><p>两位玩家选择同一台游戏服务端，再通过房间号会合。</p><label class="field-label" for="server-mode">连接到</label><select id="server-mode" class="text-input"><option value="current" ${!custom?'selected':''}>当前页面的服务端</option><option value="custom" ${custom?'selected':''}>自定义公网服务端</option></select><div id="server-address-wrap" ${custom?'':'hidden'}><label class="field-label" for="server-url">服务端网址</label><input id="server-url" class="text-input" type="url" placeholder="https://game.example.com" value="${esc(customServerUrl)}"><p class="server-hint">填写完整网址，公网地址建议使用 HTTPS。</p></div><label class="field-label" for="name">你的名字</label><input id="name" class="text-input" maxlength="16" placeholder="输入昵称" value="玩家"><button id="create" class="primary full" style="margin-top:15px">创建新房间</button><div class="divider">或者加入朋友的房间</div><div class="join-row"><input id="code" class="text-input" maxlength="6" placeholder="六位房间号"><button id="join" class="secondary">加入房间</button></div><p class="lobby-note">十一种卡共42张，双方从同一牌堆各随机抽六张。</p></div></section>`;
 }
 const me=()=>state.players[state.you], foe=()=>state.players[1-state.you];
 function isMyTurn(){return state.phase==='battle'&&state.turn===state.you&&!state.pending;}
@@ -103,41 +107,87 @@ function rpsScreen(){
   app.innerHTML=`<section class="center-state"><div class="hero-eyebrow">WHO GOES FIRST?</div><h2>${waiting?'等对手出拳':'猜拳决定先后手'}</h2><p>${waiting?'你已经出拳，等另一位玩家。':'输家先摆三张牌，赢家后摆并先行动。'}${!waiting?'你也可以浏览一下手牌：':''}</p>${!waiting?`<div class="rps-row"><button class="secondary" data-rps="rock">✊ 石头</button><button class="secondary" data-rps="paper">✋ 布</button><button class="secondary" data-rps="scissors">✌ 剪刀</button></div>`:''}<p class="muted">${me().hand.map(c=>esc(cardData(c.type).name)).join('　·　')}</p></section>`;
   wire();
 }
+function locate(id,seen=new Set()){
+  if(!id||seen.has(id))return null;seen.add(id);
+  for(let p=0;p<2;p++)for(let s=0;s<4;s++)if(state.players[p].field[s]?.id===id)return {p,s,locationP:p,c:state.players[p].field[s],kind:'field'};
+  const cover=state.covering?.find(x=>x.c.id===id);if(cover){const base=locate(cover.targetId,seen);if(base)return {p:cover.p,s:base.s,locationP:base.locationP,c:cover.c,kind:'cover'};}
+  return null;
+}
+function topAt(id){let a=locate(id);const seen=new Set();while(a?.c.suppressedBy&&!seen.has(a.c.id)){seen.add(a.c.id);const top=locate(a.c.suppressedBy);if(!top)break;a=top;}return a;}
+const physicalRow=a=>a.locationP===0?(a.s<2?1:0):(a.s<2?2:3);
+const reachable=(a,b)=>Math.abs(physicalRow(a)-physicalRow(b))<=2;
+function actorAction(action){
+  let next=action;for(const step of [...(intent?.control||[])].reverse())next={type:'control',actorId:step.actorId,targetId:step.targetId,action:next};
+  return send(next);
+}
+function changeIntent(kind){intent={...intent,kind};render();}
+function legalTarget(id,kind=intent?.kind){
+  const a=locate(intent?.actorId),raw=locate(id),t=['attack','kangaroo','elephant'].includes(kind)?topAt(id):raw;
+  if(!t)return false;
+  if(kind==='seahorse')return t.p!==state.you;
+  if(!a)return false;
+  if(['attack','kangaroo'].includes(kind))return t.c.id!==a.c.id&&!t.c.sleep&&!(t.kind==='cover'&&t.p===state.you)&&(intent?.control?.length||t.p!==a.p)&&reachable(a,t);
+  if(kind==='sunfish')return t.p===a.p&&t.c.id!==a.c.id&&t.c.hp<cardData(t.c.type).hp;
+  if(kind==='sloth')return t.p!==a.p&&!t.c.suppressedBy;
+  if(kind==='elephant')return t.p!==a.p;
+  if(kind==='whale')return t.p!==a.p&&!t.c.sleep&&!t.c.suppressedBy&&!(intent?.control||[]).some(x=>x.actorId===t.c.id);
+  return false;
+}
+function renderRows(owner,side){
+  const locationP=side==='mine'?state.you:1-state.you;
+  return [0,1].map(r=>{const localRow=side==='enemy'?1-r:r;return `<div class="row"><span class="row-label">${localRow?'后排':'前排'}</span>${[0,1].map(col=>{
+    const s=localRow*2+col,base=owner.field[s],top=base?topAt(base.id):null,death=effects.dead.get(`${locationP}:${s}`);
+    const layers=[];let c=base;while(c&&!layers.some(x=>x.id===c.id)){layers.push(c);c=c.suppressedBy?locate(c.suppressedBy)?.c:null;}
+    const ret=state.pending?.kind==='return'&&state.pending.respondTo===state.you&&side==='mine';
+    const actor=locate(intent?.actorId),activeReturn=intent?.kind==='elephantReturn'&&actor?.p===locationP&&isMyTurn();
+    let selectable=base?legalTarget(base.id):!base&&(ret||activeReturn||(side==='mine'&&isMyTurn()&&(chosenHand||intent?.kind==='starSlot')));
+    const stack=layers.length>1;
+    const contents=base?`${cardHTML(top?.c||base,{selected:intent?.actorId===(top?.c||base).id})}${stack?`<div class="suppressed-stack">${layers.slice(0,-1).reverse().map(x=>`<button class="suppressed-unit" data-card="${esc(x.id)}" data-owner="field" title="${esc(cardData(x.type).text)}">⛓ ${esc(cardData(x.type).name)} · ♥${x.hp} · 被压制</button>`).join('')}</div>`:''}`:death?`<span class="slot-death"><b>✦</b><small>${esc(death)}退场</small></span>`:selectable?'＋':'·';
+    return `<div class="slot ${!base?'empty':''} ${selectable?'selectable':''} ${stack?'stacked':''}" style="--stack-height:${(layers.length-1)*28}px" data-slot="${s}" data-side="${side}">${contents}</div>`;
+  }).join('')}</div>`;}).join('');
+}
 function intentText(){
-  const i=intent;if(!i)return {title:'选择行动',body:isMyTurn()?'点击场上己方牌发动技能，或选择手牌。':'等待行动或查看战况。'};
-  const map={place:['选择空格','点击自己半场的空格上场。'],attack:['选择攻击目标','点击射程内的敌方场上牌。'],sloth:['选择目标','点击一张敌方场上牌使其睡眠。'],shark:['选择一排','鲨鱼会攻击该排所有可攻击的牌。'],starDiscard:['选择复活牌','点击己方或对方弃牌堆中的一张非一次性牌。'],starSlot:['选择复活位置','点击自己的空格。'],seahorse:['选择夺取方式','选择一张敌方场上牌，或盲抽手牌。'],sunfish:['选择治疗目标','点击一张受伤的其他友方牌。'],onceSloth:['选择目标排','敌方该排的所有牌进入睡眠。']};return {title:map[i.kind]?.[0]||'选择目标',body:map[i.kind]?.[1]||''};
+  const map={place:['选择空格','点击自己半场的空格上场。'],attack:['选择攻击目标','点击高亮的射程内目标。'],sloth:['选择睡眠目标','敌牌睡至施加者第二次回合开始。'],shark:['选择一排','按鲨鱼原有阵营与射程攻击对面的一排。'],starDiscard:['选择复活牌','从双方弃牌堆选一张非一次性牌。'],starSlot:['选择复活位置','点击自己的空格。'],seahorse:['选择夺取方式','点击敌方场上牌，或盲抽手牌。'],sunfish:['选择治疗目标','点击受伤的其他友方牌。'],onceSloth:['选择目标排','敌方该排进入睡眠。'],kangaroo:['选择落击目标','消耗1点，解除腾空并造成1+势能的伤害。'],elephant:['选择压制目标','只能压制敌方。其技能状态会被清除。'],elephantReturn:['选择返回位置','点击大象原持有者半场的空格，主动返回消耗1点。'],whale:['选择要操控的牌','选择敌牌，再为它指定一次耗点行为；全部共耗1点。']};
+  const item=map[intent?.kind];return item?{title:item[0],body:item[1]}:{title:'选择行动',body:isMyTurn()?'点击场上己方牌发动技能，或选择手牌。':'等待行动或查看卡牌。'};
 }
 function actionPanel(){
-  const p=me(),selected=p.field.flat().find(c=>c?.id===intent?.actorId), text=intentText();
+  const p=me(),selected=locate(intent?.actorId)?.c,text=intentText(),controlled=!!intent?.control?.length;
+  if(state.pending?.kind==='return'){
+    if(state.pending.respondTo!==state.you)return '<h3 class="choice-title">大象返回</h3><p>等待大象持有者选择返回位置。</p>';
+    return `<h3 class="choice-title">大象免费返回</h3><p>剩余 ${state.pending.returnCard?.hp} 生命。点击自己的空格，或选择下面的位置。</p>${p.field.map((c,s)=>!c?`<button class="option" data-return="${s}">${s<2?'前':'后'}排${s%2?'右':'左'}格</button>`:'').join('')}`;
+  }
+  if(state.pending?.respondTo===state.you){const penguins=p.field.filter(c=>c?.type==='penguin'&&!c.sleep&&!c.suppressedBy&&c.id!==topAt(state.pending.target)?.c.id);return `<h3 class="choice-title">企鹅挡伤</h3><p>选择企鹅替目标承受本次伤害，或放行。</p>${penguins.map(c=>`<button class="option" data-intercept="${c.id}">🐧 企鹅挡伤</button>`).join('')}<button class="secondary full" data-intercept="">放行</button>`;}
+  if(state.pending)return '<h3 class="choice-title">伤害结算中</h3><p>等待防守方响应。</p>';
+  if(state.phase==='ended')return `<h3 class="choice-title">对局结束</h3><p>${esc(state.players[state.winner]?.name)}获胜。</p>`;
   let h=selectedCard(chosenHand);if(intent&&intent.kind!=='actor')h=null;
-  if(state.pending?.respondTo===state.you){const penguins=p.field.filter(c=>c?.type==='penguin'&&!c.sleep);return `<h3 class="choice-title">企鹅挡伤</h3><p>选择一只企鹅替目标承受伤害，或让攻击落下。</p>${penguins.map(c=>`<button class="option" data-intercept="${c.id}">🐧 ${esc(cardData(c.type).name)}挡伤</button>`).join('')}<button class="secondary full" data-intercept="">放行</button>`;}
-  if(state.pending)return '<h3 class="choice-title">伤害结算中</h3><p>等待防守方作出响应。</p>';
-  if(state.phase==='rps')return '<h3 class="choice-title">猜拳</h3><p>用猜拳决定开局顺序。</p>';
-  if(state.phase==='setup')return `<h3 class="choice-title">${state.setup===state.you?'开局布阵':'等待对手'}</h3><p>各自上场三张牌。摆牌不消耗行动点。</p>`;
-  if(state.phase==='ended')return `<h3 class="choice-title">${state.winner===state.you?'对局胜利':'对局结束'}</h3><p>${esc(state.players[state.winner]?.name)}获胜。</p>`;
-  if(h){
-    const d=cardData(h.type);let b=`<h3 class="choice-title">${esc(d.name)}</h3><p>${esc(d.text)}</p>`;
+  if(h){const d=cardData(h.type);let b=`<h3 class="choice-title">${esc(d.name)}</h3><p>${esc(d.text)}</p>`;
     if(d.kind!=='once')b+='<button class="option" data-choice="place">放到场上</button>';
-    if(h.type==='sloth')b+='<button class="option" data-choice="onceSloth">作为一次性使用 · 敌方一排睡眠</button>';
-    if(h.type==='starfish'){const available=[...p.discard,...foe().discard].some(c=>cardData(c.type).kind!=='once');b+=`<button class="option" data-choice="starDiscard" ${available?'':'disabled'}>使用海星 · 复活弃牌</button>`;if(!available)b+='<p>双方弃牌堆里还没有可复活的牌。</p>';}
-    if(h.type==='seahorse')b+='<button class="option" data-choice="seahorse">使用海马 · 夺取场上牌</button><button class="option" data-choice="seahorseBlind">使用海马 · 盲抽手牌</button>';
-    if(d.kind==='unit')b='<h3 class="choice-title">'+esc(d.name)+'</h3><p>'+esc(d.text)+'</p><button class="option" data-choice="place">放到场上</button>';
+    if(h.type==='sloth')b+='<button class="option" data-choice="onceSloth">一次性使用 · 敌方一排睡眠</button>';
+    if(h.type==='starfish'){const available=[...p.discard,...foe().discard].some(c=>cardData(c.type).kind!=='once');b+=`<button class="option" data-choice="starDiscard" ${available?'':'disabled'}>海星 · 复活弃牌</button>`;if(!available)b+='<p>双方弃牌堆暂无可复活牌。</p>';}
+    if(h.type==='seahorse')b+='<button class="option" data-choice="seahorse">海马 · 夺取场上牌</button><button class="option" data-choice="seahorseBlind">海马 · 盲抽手牌</button>';
     return b;
   }
-  if(intent?.kind==='starDiscard'){
-    const pile=(owner,label)=>`<div class="revive-group"><strong>${label}</strong>${owner.discard.filter(c=>cardData(c.type).kind!=='once').map(c=>`<button class="option" data-discard="${esc(c.id)}">${esc(cardData(c.type).name)}</button>`).join('')||'<p>没有可复活的牌</p>'}</div>`;
-    return `<h3 class="choice-title">选择复活牌</h3><p>从任意一方的弃牌堆选择一张牌。</p>${pile(p,'己方弃牌堆')}${pile(foe(),'对方弃牌堆')}<button class="ghost small" data-choice="cancel">取消</button>`;
+  if(intent?.kind==='starDiscard'){const pile=(owner,label)=>`<div class="revive-group"><strong>${label}</strong>${owner.discard.filter(c=>cardData(c.type).kind!=='once').map(c=>`<button class="option" data-discard="${esc(c.id)}">${esc(cardData(c.type).name)}</button>`).join('')||'<p>没有可复活的牌</p>'}</div>`;return `<h3 class="choice-title">选择复活牌</h3>${pile(p,'己方弃牌堆')}${pile(foe(),'对方弃牌堆')}<button class="ghost small" data-choice="cancel">取消</button>`;}
+  if(intent&&!['actor','inspect'].includes(intent.kind))return `<h3 class="choice-title">${esc(text.title)}</h3><p>${esc(text.body)}</p>${controlled?'<p class="control-note">鲸操控中 · 位置与射程不变</p>':''}<button class="ghost small" data-choice="cancel">取消</button>${intent.kind==='shark'?'<button class="option" data-row="0">攻击原敌方前排</button><button class="option" data-row="1">攻击原敌方后排</button>':''}${intent.kind==='seahorse'?'<button class="option" data-blind="1">盲抽敌方手牌</button>':''}${intent.kind==='onceSloth'?'<button class="option" data-row="0">使敌方前排睡眠</button><button class="option" data-row="1">使敌方后排睡眠</button>':''}`;
+  if(selected){let b=`<h3 class="choice-title">${esc(cardData(selected.type).name)} · ${selected.hp} HP</h3><p>${esc(cardData(selected.type).text)}</p>`;
+    if(selected.sleep)b+='<p>☾ 睡眠中，不能行动或被攻击。</p>';
+    if(selected.suppressedBy)b+='<p>⛓ 被压制，不能操作。</p>';
+    if(selected.airborne)b+=`<p>↑ 腾空 · 重力势能 ${selected.gravity}/3 · 落击/反击伤害 ${1+selected.gravity}</p>`;
+    if(intent.kind==='inspect')return b;
+    if(controlled)b+='<p class="control-note">鲸正在操控这张牌，可选择耗点行为。普通攻击可指定它原本的友方。</p>';
+    b+='<button class="option" data-choice="attack">普通攻击 · 消耗1点</button>';
+    if(selected.type==='sloth')b+='<button class="option" data-choice="sloth">使敌方牌睡眠 · 1点</button>';
+    if(selected.type==='shark')b+='<button class="option" data-choice="shark">攻击敌方一排 · 1点</button>';
+    if(selected.type==='sunfish'&&!controlled)b+='<button class="option" data-choice="sunfish">治疗友方 · 免费</button>';
+    if(selected.type==='crab'&&!controlled)b+='<button class="option" data-choice="crab">换取行动点 · 免费</button>';
+    if(selected.type==='kangaroo')b+=`<button class="option" data-choice="kangaroo">${selected.airborne?'落击 · '+(1+selected.gravity)+'伤害':'进入腾空 · 立即获得1势能'} · 1点</button>`;
+    if(selected.type==='elephant')b+=`<button class="option" data-choice="elephant">${locate(selected.id).kind==='cover'?'主动解除压制并返回':'压制敌方牌'} · 1点</button>`;
+    if(selected.type==='whale')b+='<button class="option" data-choice="whale">操控敌方牌行动 · 共1点</button>';
+    return b+'<button class="ghost small" data-choice="cancel">取消选择</button>';
   }
-  if(intent&&intent.kind!=='actor')return `<h3 class="choice-title">${esc(text.title)}</h3><p>${esc(text.body)}</p><button class="ghost small" data-choice="cancel">取消</button>${intent.kind==='shark'?'<button class="option" data-row="0">攻击敌方前排</button><button class="option" data-row="1">攻击敌方后排</button>':''}${intent.kind==='seahorse'?'<button class="option" data-blind="1">盲抽一张敌方手牌</button>':''}${intent.kind==='onceSloth'?'<button class="option" data-row="0">使敌方前排睡眠</button><button class="option" data-row="1">使敌方后排睡眠</button>':''}`;
-  if(selected){let buttons=`<h3 class="choice-title">${esc(cardData(selected.type).name)} · ${selected.hp} HP</h3><button class="option" data-choice="attack">普通攻击 · 消耗1行动点</button>`;
-    if(selected.type==='sloth')buttons+='<button class="option" data-choice="sloth">技能：使敌方牌睡眠 · 消耗1点</button>';
-    if(selected.type==='shark')buttons+='<button class="option" data-choice="shark">技能：攻击敌方一排 · 消耗1点</button>';
-    if(selected.type==='sunfish')buttons+='<button class="option" data-choice="sunfish">技能：治疗友方 · 免费</button>';
-    if(selected.type==='crab')buttons+='<button class="option" data-choice="crab">技能：换取行动点 · 免费</button>';
-    buttons+='<p>海胆被动自动触发。企鹅在对方回合自动提供挡伤选项。</p>';return buttons;
-  }
-  return `<h3 class="choice-title">${esc(text.title)}</h3><p>${esc(text.body)}</p>${isMyTurn()?`<p>点击手牌或场上己方牌继续。</p>`:''}`;
+  return `<h3 class="choice-title">${esc(text.title)}</h3><p>${esc(text.body)}</p>`;
 }
+
 function resultOverlay(){
   const won=state.winner===state.you;
   const sparks=won?Array.from({length:22},(_,i)=>`<i style="left:${4+(i*37)%92}%;--drift:${(i%2?1:-1)*(28+i*5)}px;animation-delay:${(i%6)*.09}s"></i>`).join(''):'';
@@ -145,8 +195,8 @@ function resultOverlay(){
 }
 function battleScreen(){
   const p=me(),o=foe(), mineTurn=isMyTurn();
-  const cardRows=(owner,side)=>[0,1].map(r=>{const localRow=side==='enemy'?1-r:r;const ownerIndex=side==='enemy'?1-state.you:state.you;return `<div class="row"><span class="row-label">${localRow?'后排':'前排'}</span>${[0,1].map(col=>{const s=localRow*2+col,c=owner.field[s],death=effects.dead.get(`${ownerIndex}:${s}`);let selectable=false;if(!c&&side==='mine'&&mineTurn&&(chosenHand||intent?.kind==='place'||intent?.kind==='starSlot'))selectable=true;if(c&&intent?.kind==='attack'&&side==='enemy'&&c.sleep===0)selectable=true;if(c&&intent?.kind==='sloth'&&side==='enemy')selectable=true;if(c&&intent?.kind==='sunfish'&&side==='mine')selectable=true;if(c&&intent?.kind==='seahorse'&&side==='enemy')selectable=true;return `<div class="slot ${!c?'empty':''} ${selectable?'selectable':''}" data-slot="${s}" data-side="${side}">${c?cardHTML(c,{selected:intent?.actorId===c.id}):death?`<span class="slot-death"><b>✦</b><small>${esc(death)}退场</small></span>`:selectable?'＋':'·'}</div>`}).join('')}</div>`}).join('');
-  app.innerHTML=`<div class="game-layout"><section class="arena"><div class="player-strip"><div><strong>${esc(o.name)}</strong> <span>对手 · ${o.handCount} 张手牌</span></div><div>${state.turn===1-state.you?'<span class="turn-badge">对手行动</span>':''}<div class="back-row">${Array.from({length:Math.min(o.handCount,8)},()=>'<i class="mini-back">✦</i>').join('')}</div></div></div><div class="battlefield"><div class="zone-title">${esc(o.name)} · 敌方半场</div>${cardRows(o,'enemy')}<div class="middle-line">潮 汐 分 界</div>${cardRows(p,'mine')}<div class="zone-title">你的半场</div></div><div class="hand-area"><div class="hand-heading"><strong>你的手牌</strong><span>${p.hand.length} 张 · ${mineTurn?`行动点 ${state.ap}`:'等待中'}</span></div><div class="hand-cards"><div class="hand-track">${p.hand.map(c=>cardHTML(c,{hand:true,selected:chosenHand===c.id})).join('')}</div></div></div><div class="player-strip" style="margin-top:12px"><strong>你的弃牌堆 <span>(${p.discard.length})</span></strong><span>${p.discard.length?p.discard.map(c=>`<button class="ghost small" data-discard="${esc(c.id)}">${esc(cardData(c.type).name)}</button>`).join(' '):'暂无弃牌'}</span></div></section><aside class="side-panel"><h2>对局状态</h2><p class="phase-text">${state.pending?.respondTo===state.you?'你的企鹅可以拦截这次伤害。':mineTurn?'轮到你行动。场地至少保留一张己方牌。':`等待${esc(o.name)}行动。`}</p><div class="stat-line"><div class="stat"><strong>${state.ap}</strong><span>行动点</span></div><div class="stat"><strong>${state.round}</strong><span>当前回合</span></div><div class="stat"><strong>${p.passes}</strong><span>连续弃权</span></div></div><div class="action-panel">${actionPanel()}</div><button class="secondary full pass-button" data-pass="1" ${!mineTurn?'disabled':''}>放弃行动点 · 结束回合</button><h2 class="log-title">战况记录</h2><div class="log">${[...state.log].reverse().map(x=>`<div class="log-entry">${esc(x)}</div>`).join('')}</div></aside></div>`;
+  const cardRows=(owner,side)=>renderRows(owner,side);
+  app.innerHTML=`<div class="game-layout"><section class="arena"><div class="player-strip"><div><strong>${esc(o.name)}</strong> <span>对手 · ${o.handCount} 张手牌</span></div><div>${state.turn===1-state.you?'<span class="turn-badge">对手行动</span>':''}<div class="back-row">${Array.from({length:Math.min(o.handCount,8)},()=>'<i class="mini-back">✦</i>').join('')}</div></div></div><div class="battlefield"><div class="zone-title">${esc(o.name)} · 敌方半场</div>${cardRows(o,'enemy')}<div class="middle-line">潮 汐 分 界</div>${cardRows(p,'mine')}<div class="zone-title">你的半场</div></div><div class="hand-area"><div class="hand-heading"><strong>你的手牌</strong><span>${p.hand.length} 张 · ${mineTurn?`行动点 ${state.ap}`:'等待中'}</span></div><div class="hand-cards"><div class="hand-track">${p.hand.map(c=>cardHTML(c,{hand:true,selected:chosenHand===c.id})).join('')}</div></div></div><div class="player-strip" style="margin-top:12px"><strong>你的弃牌堆 <span>(${p.discard.length})</span></strong><span>${p.discard.length?p.discard.map(c=>`<button class="ghost small" data-discard="${esc(c.id)}">${esc(cardData(c.type).name)}</button>`).join(' '):'暂无弃牌'}</span></div></section><aside class="side-panel"><h2>对局状态</h2><p class="phase-text">${state.pending?.kind==='return'?(state.pending.respondTo===state.you?'请选择大象返回的位置。':'等待对手选择大象返回位置。'):state.pending?.respondTo===state.you?'你的企鹅可以拦截这次伤害。':mineTurn?'轮到你行动。场地至少保留一张己方牌。':`等待${esc(o.name)}行动。`}</p><div class="stat-line"><div class="stat"><strong>${state.ap}</strong><span>行动点</span></div><div class="stat"><strong>${state.round}</strong><span>当前回合</span></div><div class="stat"><strong>${p.passes}</strong><span>连续弃权</span></div></div><div class="action-panel">${actionPanel()}</div><button class="secondary full pass-button" data-pass="1" ${!mineTurn?'disabled':''}>放弃行动点 · 结束回合</button><h2 class="log-title">战况记录</h2><div class="log">${[...state.log].reverse().map(x=>`<div class="log-entry">${esc(x)}</div>`).join('')}</div></aside></div>`;
   app.querySelector('.arena > .player-strip').insertAdjacentHTML('afterend',`<div class="opponent-discard"><strong>对手弃牌堆 <span>(${o.discard.length})</span></strong><div>${o.discard.length?o.discard.map(c=>`<button class="ghost small" data-discard="${esc(c.id)}">${esc(cardData(c.type).name)}</button>`).join(' '):'<span>暂无弃牌</span>'}</div></div>`);
   if(state.phase==='ended'){app.querySelector('.game-layout').inert=true;app.insertAdjacentHTML('beforeend',resultOverlay());}
   wire();
@@ -163,49 +213,53 @@ function chooseCard(id,owner){
     if(state.phase==='setup'&&state.setup===state.you){chosenHand=id;intent={kind:'place'};render();return;}
     if(!isMyTurn())return;chosenHand=id;intent=null;render();return;
   }
-  if(owner==='field'){
-    const c=me().field.find(x=>x?.id===id);if(!c)return;
-    if(intent?.kind==='attack'){void send({type:'attack',actorId:intent.actorId,targetId:id});return;}
-    if(intent?.kind==='sloth'){void send({type:'skill',actorId:intent.actorId,targetId:id});return;}
-    if(intent?.kind==='sunfish'){void send({type:'skill',actorId:intent.actorId,targetId:id});return;}
-    if(!isMyTurn()||c.sleep)return;chosenHand=null;intent={kind:'actor',actorId:id};render();
+  const targetKinds=['attack','sloth','sunfish','seahorse','kangaroo','elephant','whale'];
+  if(isMyTurn()&&targetKinds.includes(intent?.kind)){
+    if(!legalTarget(id)){notify('这张牌不符合目标条件，请选择高亮目标。');return;}
+    if(intent.kind==='whale'){intent={kind:'actor',actorId:id,control:[...(intent.control||[]),{actorId:intent.actorId,targetId:id}]};chosenHand=null;render();return;}
+    if(intent.kind==='seahorse'){void send({type:'once',cardId:chosenHand,targetId:id});return;}
+    const targetId=['attack','kangaroo','elephant'].includes(intent.kind)?topAt(id).c.id:id;
+    void actorAction({type:intent.kind==='attack'?'attack':'skill',actorId:intent.actorId,targetId});return;
   }
+  const a=locate(id);if(!a)return;chosenHand=null;
+  intent={kind:isMyTurn()&&a.p===state.you&&!a.c.sleep&&!a.c.suppressedBy?'actor':'inspect',actorId:id};render();
 }
 function handleSlot(el){
-  const slot=Number(el.dataset.slot), side=el.dataset.side, cardEl=el.querySelector('[data-card]');
-  if(cardEl){chooseCard(cardEl.dataset.card,side==='mine'?'field':'enemy');
-    if(intent?.kind==='seahorse'&&side==='enemy'){void send({type:'once',cardId:chosenHand,targetId:cardEl.dataset.card});}return;}
-  if(side!=='mine'||!isMyTurn()&&state.phase!=='setup')return;
+  const slot=Number(el.dataset.slot),side=el.dataset.side,cardEl=el.querySelector('.card[data-card]');
+  if(cardEl){chooseCard(cardEl.dataset.card,'field');return;}
+  if(state.pending?.kind==='return'&&state.pending.respondTo===state.you&&side==='mine'){void send({type:'return',slot});return;}
+  if(intent?.kind==='elephantReturn'&&isMyTurn()){const a=locate(intent.actorId),p=side==='mine'?state.you:1-state.you;if(p===a?.p)void actorAction({type:'skill',actorId:a.c.id,slot});return;}
+  if(side!=='mine'||(!isMyTurn()&&state.phase!=='setup'))return;
   if(intent?.kind==='starSlot'){void send({type:'once',cardId:chosenHand,discardId:intent.discardId,slot});return;}
-  if(chosenHand&&(['place','actor'].includes(intent?.kind)||state.phase==='setup')){void send({type:'place',cardId:chosenHand,slot});return;}
+  if(chosenHand&&(intent?.kind==='place'||state.phase==='setup'))void send({type:'place',cardId:chosenHand,slot});
 }
 function leaveGame(){
-  stopEvents();clearTimeout(fxTimer);sessionStorage.removeItem(sessionKey);
-  token=null;state=null;intent=null;chosenHand=null;
-  effects={hit:new Map(),heal:new Set(),attack:new Set(),sleep:new Set(),dead:new Map(),targeting:new Set()};
-  render();
+  stopEvents();clearTimeout(fxTimer);sessionStorage.removeItem(sessionKey);token=null;state=null;intent=null;chosenHand=null;
+  effects={hit:new Map(),heal:new Set(),attack:new Set(),sleep:new Set(),dead:new Map(),targeting:new Set()};render();
 }
 function wire(){
-  app.querySelectorAll('[data-card]').forEach(el=>el.onclick=e=>{e.stopPropagation();const owner=el.dataset.owner==='hand'?'hand':'field';if(owner==='field'&&el.closest('.slot')?.dataset.side==='enemy'){if(intent?.kind==='seahorse'){void send({type:'once',cardId:chosenHand,targetId:el.dataset.card});return;}if(intent?.kind==='attack'||intent?.kind==='sloth'){void send(intent.kind==='attack'?{type:'attack',actorId:intent.actorId,targetId:el.dataset.card}:{type:'skill',actorId:intent.actorId,targetId:el.dataset.card});return;}}chooseCard(el.dataset.card,owner);});
+  app.querySelectorAll('[data-card]').forEach(el=>el.onclick=e=>{e.stopPropagation();chooseCard(el.dataset.card,el.dataset.owner==='hand'?'hand':'field');});
   app.querySelectorAll('.slot').forEach(el=>el.onclick=()=>handleSlot(el));
   app.querySelectorAll('[data-rps]').forEach(b=>b.onclick=()=>void send({type:'rps',choice:b.dataset.rps}));
-  const pass=app.querySelector('[data-pass]');if(pass)pass.onclick=()=>{intent=null;chosenHand=null;void send({type:'pass'});};
-  app.querySelectorAll('[data-choice]').forEach(b=>b.onclick=()=>{const c=b.dataset.choice;
-    if(c==='cancel'){intent=null;chosenHand=null;render();return;}
-    if(c==='place'){intent={kind:'place'};render();return;}
-    if(c==='attack'){intent={kind:'attack',actorId:intent?.actorId||app.querySelector('.card.selected')?.dataset.card};render();return;}
-    if(['sloth','shark','sunfish','crab'].includes(c)){const actorId=app.querySelector('.card.selected')?.dataset.card; if(c==='crab'){void send({type:'skill',actorId});return;}intent={kind:c,actorId};if(c==='sunfish'){}render();return;}
-    if(c==='starDiscard'){intent={kind:'starDiscard'};render();return;}
-    if(c==='seahorse'){intent={kind:'seahorse'};render();return;}
-    if(c==='seahorseBlind'){void send({type:'once',cardId:chosenHand});return;}
-    if(c==='onceSloth'){intent={kind:'onceSloth'};render();return;}
+  const pass=app.querySelector('[data-pass]');if(pass)pass.onclick=()=>void send({type:'pass'});
+  app.querySelectorAll('[data-choice]').forEach(b=>b.onclick=()=>{
+    const kind=b.dataset.choice,actorId=intent?.actorId;
+    if(kind==='cancel'){intent=null;chosenHand=null;render();return;}
+    if(kind==='crab'){void actorAction({type:'skill',actorId});return;}
+    if(kind==='kangaroo'&&!locate(actorId)?.c.airborne){void actorAction({type:'skill',actorId});return;}
+    if(kind==='elephant'){changeIntent(locate(actorId)?.kind==='cover'?'elephantReturn':'elephant');return;}
+    if(kind==='seahorseBlind'){void send({type:'once',cardId:chosenHand});return;}
+    if(['attack','sloth','sunfish','shark','kangaroo','whale'].includes(kind)){changeIntent(kind);return;}
+    if(['place','starDiscard','seahorse','onceSloth'].includes(kind)){intent={kind};render();}
   });
-  app.querySelectorAll('[data-row]').forEach(b=>b.onclick=()=>{const row=Number(b.dataset.row);if(intent?.kind==='shark')void send({type:'skill',actorId:intent.actorId,row});else if(intent?.kind==='onceSloth')void send({type:'once',cardId:chosenHand,row});});
+  app.querySelectorAll('[data-row]').forEach(b=>b.onclick=()=>{const row=Number(b.dataset.row);if(intent?.kind==='shark')void actorAction({type:'skill',actorId:intent.actorId,row});else if(intent?.kind==='onceSloth')void send({type:'once',cardId:chosenHand,row});});
   app.querySelectorAll('[data-intercept]').forEach(b=>b.onclick=()=>void send({type:'intercept',penguinId:b.dataset.intercept||null}));
+  app.querySelectorAll('[data-return]').forEach(b=>b.onclick=()=>void send({type:'return',slot:Number(b.dataset.return)}));
   app.querySelectorAll('[data-blind]').forEach(b=>b.onclick=()=>void send({type:'once',cardId:chosenHand}));
   app.querySelectorAll('[data-discard]').forEach(b=>{const card=[...me().discard,...foe().discard].find(c=>c.id===b.dataset.discard);b.disabled=intent?.kind!=='starDiscard'||!card||cardData(card.type).kind==='once';b.onclick=()=>{intent={kind:'starSlot',discardId:b.dataset.discard};render();};});
   app.querySelectorAll('[data-leave]').forEach(b=>b.onclick=leaveGame);
 }
+
 document.querySelector('#rules-button').onclick=()=>document.querySelector('#rules').showModal();
 document.querySelector('#rules form').onsubmit=e=>{e.preventDefault();document.querySelector('#rules').close();};
 app.addEventListener('click',async e=>{
