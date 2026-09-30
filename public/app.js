@@ -15,7 +15,7 @@ let serverMode = localStorage.getItem(serverModeKey) || 'current';
 let customServerUrl = localStorage.getItem(serverUrlKey) || '';
 let effects = { hit:new Map(), heal:new Set(), attack:new Set(), sleep:new Set(), dead:new Map(), targeting:new Set() };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const cardData = type => state?.cards?.[type] || ({kangaroo:{name:'袋鼠',kind:'unit',hp:2,text:'腾空积累势能；落击或受伤反击。'},elephant:{name:'大象',kind:'unit',hp:3,text:'压制敌方牌；受击免费返回，主动返回耗1点。'},whale:{name:'鲸',kind:'unit',hp:2,text:'操控敌方牌执行一次耗点行动，共耗1点。'},sloth:{name:'树懒',kind:'dual',hp:2,text:'使一张敌方牌睡眠；一次性可使一排睡眠。'},starfish:{name:'海星',kind:'once',text:'从双方弃牌堆复活一张牌。'},seahorse:{name:'海马',kind:'once',text:'夺取敌方牌，或盲抽一张手牌。'},urchin:{name:'海胆',kind:'unit',hp:2,text:'受伤时反弹1点伤害。'},sunfish:{name:'翻车鱼',kind:'unit',hp:3,text:'消耗1生命为友方牌恢复1生命，可因此退场。'},shark:{name:'鲨鱼',kind:'unit',hp:2,text:'攻击一排；击杀后追击。'},crab:{name:'螃蟹',kind:'unit',hp:2,text:'消耗1生命获得1行动点，可因此退场。'},penguin:{name:'企鹅',kind:'unit',hp:3,text:'对方回合替友方牌挡伤。'}})[type];
+const cardData = type => state?.cards?.[type] || ({kangaroo:{name:'袋鼠',kind:'unit',hp:2,text:'腾空积累势能；落击或受伤反击。'},elephant:{name:'大象',kind:'unit',hp:2,text:'压制敌方牌；受击免费返回，主动返回耗1点。'},whale:{name:'鲸',kind:'unit',hp:2,text:'操控敌方牌执行一次耗点行动，共耗1点。'},sloth:{name:'树懒',kind:'dual',hp:2,text:'使一张敌方牌睡眠；一次性可使一排睡眠。'},starfish:{name:'海星',kind:'once',text:'从双方弃牌堆复活一张牌。'},seahorse:{name:'海马',kind:'once',text:'夺取敌方牌，或盲抽一张手牌。'},urchin:{name:'海胆',kind:'unit',hp:2,text:'受伤时反弹1点伤害。'},sunfish:{name:'翻车鱼',kind:'unit',hp:3,text:'消耗1生命为友方牌恢复1生命，可因此退场。'},shark:{name:'鲨鱼',kind:'unit',hp:2,text:'攻击一排；击杀后追击。'},crab:{name:'螃蟹',kind:'unit',hp:2,text:'消耗1生命获得1行动点，可因此退场。'},penguin:{name:'企鹅',kind:'unit',hp:3,text:'对方回合替友方牌挡伤。'}})[type];
 const art = type => {
   const shapes = {
     kangaroo:'<path d="M82 40L77 15q10-8 14 24m18 2l8-26q12 0 2 31" fill="#cc9567" stroke="#956343" stroke-width="4"/><ellipse cx="100" cy="54" rx="24" ry="22" fill="#dcaa7a"/><ellipse cx="104" cy="78" rx="28" ry="25" fill="#b88155"/><ellipse cx="103" cy="82" rx="17" ry="14" fill="#eed2a2"/><path d="M78 73Q40 75 45 99L81 89m39-3l25 14m-53-5l-11 7" fill="none" stroke="#ad744f" stroke-width="9" stroke-linecap="round"/><circle cx="94" cy="48" r="3" fill="#233d48"/><circle cx="111" cy="48" r="3" fill="#233d48"/><path d="M100 55l5 4 5-4" fill="#835747"/>',
@@ -212,8 +212,13 @@ function renderRows(owner,side){
     return `<div class="slot ${!base?'empty':''} ${selectable?'selectable':''} ${stack?'stacked':''}" style="--stack-height:${(layers.length-1)*28}px" data-slot="${s}" data-side="${side}">${contents}</div>`;
   }).join('')}</div>`;}).join('');
 }
+function sharkRowsHTML(){
+  const controlled=!!intent?.control?.length;
+  const targets=controlled?[1-state.you,state.you]:[1-locate(intent?.actorId).p];
+  return targets.map(p=>[0,1].map(row=>`<button class="option" data-row="${row}" data-target-player="${p}">攻击${p===state.you?'己方':'敌方'}${row?'后':'前'}排</button>`).join('')).join('');
+}
 function intentText(){
-  const map={place:['选择空格','点击自己半场的空格上场。'],attack:['选择攻击目标','点击高亮的射程内目标。'],sloth:['选择睡眠目标','敌牌睡至施加者第二次回合开始。'],shark:['选择一排','按鲨鱼原有阵营与射程攻击对面的一排。'],starDiscard:['选择复活牌','从双方弃牌堆选一张非一次性牌。'],starSlot:['选择复活位置','点击自己的空格。'],seahorse:['选择夺取方式','点击敌方场上牌，或盲抽手牌。'],sunfish:['选择治疗目标','点击受伤的其他友方牌。'],onceSloth:['选择目标排','敌方该排进入睡眠。'],kangaroo:['选择落击目标','消耗1点，解除腾空并造成1+势能的伤害。'],elephant:['选择压制目标','只能压制敌方。其技能状态会被清除。'],elephantReturn:['选择返回位置','点击大象原持有者半场的空格，主动返回消耗1点。'],whale:['选择要操控的牌','选择敌牌，再为它指定一次耗点行为；全部共耗1点。']};
+  const map={place:['选择空格','点击自己半场的空格上场。'],attack:['选择攻击目标','点击高亮的射程内目标。'],sloth:['选择睡眠目标','敌牌睡至施加者第二次回合开始。'],shark:['选择一排','选择目标阵营的一排；鲸操控时可选择双方，位置与射程不变。'],starDiscard:['选择复活牌','从双方弃牌堆选一张非一次性牌。'],starSlot:['选择复活位置','点击自己的空格。'],seahorse:['选择夺取方式','点击敌方场上牌，或盲抽手牌。'],sunfish:['选择治疗目标','点击受伤的其他友方牌。'],onceSloth:['选择目标排','敌方该排进入睡眠。'],kangaroo:['选择落击目标','消耗1点，解除腾空并造成1+势能的伤害。'],elephant:['选择压制目标','只能压制敌方。其技能状态会被清除。'],elephantReturn:['选择返回位置','点击大象原持有者半场的空格，主动返回消耗1点。'],whale:['选择要操控的牌','选择敌牌，再为它指定一次耗点行为；全部共耗1点。']};
   const item=map[intent?.kind];return item?{title:item[0],body:item[1]}:{title:'选择行动',body:isMyTurn()?'点击场上己方牌发动技能，或选择手牌。':'等待行动或查看卡牌。'};
 }
 function actionPanel(){
@@ -234,13 +239,13 @@ function actionPanel(){
     return b;
   }
   if(intent?.kind==='starDiscard'){const pile=(owner,label)=>`<div class="revive-group"><strong>${label}</strong>${owner.discard.filter(c=>cardData(c.type).kind!=='once').map(c=>`<button class="option" data-discard="${esc(c.id)}">${esc(cardData(c.type).name)}</button>`).join('')||'<p>没有可复活的牌</p>'}</div>`;return `<h3 class="choice-title">选择复活牌</h3>${pile(p,'己方弃牌堆')}${pile(foe(),'对方弃牌堆')}<button class="ghost small" data-choice="cancel">取消</button>`;}
-  if(intent&&!['actor','inspect'].includes(intent.kind))return `<h3 class="choice-title">${esc(text.title)}</h3><p>${esc(text.body)}</p>${controlled?'<p class="control-note">鲸操控中 · 位置与射程不变</p>':''}<button class="ghost small" data-choice="cancel">取消</button>${intent.kind==='shark'?'<button class="option" data-row="0">攻击原敌方前排</button><button class="option" data-row="1">攻击原敌方后排</button>':''}${intent.kind==='seahorse'?'<button class="option" data-blind="1">盲抽敌方手牌</button>':''}${intent.kind==='onceSloth'?'<button class="option" data-row="0">使敌方前排睡眠</button><button class="option" data-row="1">使敌方后排睡眠</button>':''}`;
+  if(intent&&!['actor','inspect'].includes(intent.kind))return `<h3 class="choice-title">${esc(text.title)}</h3><p>${esc(text.body)}</p>${controlled?'<p class="control-note">鲸操控中 · 攻击可选择双方其他牌，位置与射程不变</p>':''}<button class="ghost small" data-choice="cancel">取消</button>${intent.kind==='shark'?sharkRowsHTML():''}${intent.kind==='seahorse'?'<button class="option" data-blind="1">盲抽敌方手牌</button>':''}${intent.kind==='onceSloth'?'<button class="option" data-row="0">使敌方前排睡眠</button><button class="option" data-row="1">使敌方后排睡眠</button>':''}`;
   if(selected){let b=`<h3 class="choice-title">${esc(cardData(selected.type).name)} · ${selected.hp} HP</h3><p>${esc(cardData(selected.type).text)}</p>`;
     if(selected.sleep)b+='<p>☾ 睡眠中，不能行动或被攻击。</p>';
     if(selected.suppressedBy)b+='<p>⛓ 被压制，不能操作。</p>';
     if(selected.airborne)b+=`<p>↑ 腾空 · 重力势能 ${selected.gravity}/3 · 落击/反击伤害 ${1+selected.gravity}</p>`;
     if(intent.kind==='inspect')return b;
-    if(controlled)b+='<p class="control-note">鲸正在操控这张牌，可选择耗点行为。普通攻击可指定它原本的友方。</p>';
+    if(controlled)b+='<p class="control-note">鲸正在操控这张牌，可选择耗点行为。普通攻击、袋鼠落击和鲨鱼群攻可选择鲸方的敌牌或己方其他牌，仍按原位置计算射程。</p>';
     b+='<button class="option" data-choice="attack">普通攻击 · 消耗1点</button>';
     if(selected.type==='sloth')b+='<button class="option" data-choice="sloth">使敌方牌睡眠 · 1点</button>';
     if(selected.type==='shark')b+='<button class="option" data-choice="shark">攻击敌方一排 · 1点</button>';
@@ -366,7 +371,7 @@ function wire(){
     if(['attack','sloth','sunfish','shark','kangaroo','whale'].includes(kind)){changeIntent(kind);return;}
     if(['place','starDiscard','seahorse','onceSloth'].includes(kind)){intent={kind};render();}
   });
-  app.querySelectorAll('[data-row]').forEach(b=>b.onclick=()=>{const row=Number(b.dataset.row);if(intent?.kind==='shark')void actorAction({type:'skill',actorId:intent.actorId,row});else if(intent?.kind==='onceSloth')void send({type:'once',cardId:chosenHand,row});});
+  app.querySelectorAll('[data-row]').forEach(b=>b.onclick=()=>{const row=Number(b.dataset.row);if(intent?.kind==='shark')void actorAction({type:'skill',actorId:intent.actorId,row,targetPlayer:Number(b.dataset.targetPlayer)});else if(intent?.kind==='onceSloth')void send({type:'once',cardId:chosenHand,row});});
   app.querySelectorAll('[data-intercept]').forEach(b=>b.onclick=()=>void send({type:'intercept',penguinId:b.dataset.intercept||null}));
   app.querySelectorAll('[data-return]').forEach(b=>b.onclick=()=>void send({type:'return',slot:Number(b.dataset.return)}));
   app.querySelectorAll('[data-blind]').forEach(b=>b.onclick=()=>void send({type:'once',cardId:chosenHand}));

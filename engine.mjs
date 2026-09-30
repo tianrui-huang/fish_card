@@ -10,8 +10,8 @@ export const CARDS = {
   crab: { name:'螃蟹', kind:'unit', hp:2, suit:'红', text:'攻击1。消耗自身1生命，本回合获得1行动点；可以因此退场，不耗行动点。' },
   penguin: { name:'企鹅', kind:'unit', hp:3, suit:'黑', text:'攻击1。对方回合中，可替另一张友方牌承受伤害；不耗行动点。' },
   kangaroo: { name:'袋鼠', kind:'unit', hp:2, suit:'棕', text:'攻击1。1点腾空，势能最多3层；1点落击造成1+势能伤害。受伤解除腾空并自动反击。' },
-  elephant: { name:'大象', kind:'unit', hp:3, suit:'灰', text:'攻击1。1点压制敌牌并移至其上。受伤时被压牌受1伤，大象免费返回；主动返回耗1点。' },
-  whale: { name:'鲸', kind:'unit', hp:2, suit:'靛', text:'攻击1。操控一张敌牌执行一次耗点行动，共耗1点。位置与射程不变，可令它攻击友方。' },
+  elephant: { name:'大象', kind:'unit', hp:2, suit:'灰', text:'攻击1。1点压制敌牌并移至其上。受伤时被压牌受1伤，大象免费返回；主动返回耗1点。' },
+  whale: { name:'鲸', kind:'unit', hp:2, suit:'靛', text:'攻击1。操控一张敌牌执行一次耗点行动，共耗1点。位置与射程不变，攻击可选双方其他牌。' },
 };
 export const CARD_TYPES = Object.keys(CARDS);
 export const POOL_COUNTS = {starfish:2,seahorse:2,shark:3,kangaroo:3,crab:4,whale:4,urchin:4,elephant:4,sloth:5,penguin:5,sunfish:6};
@@ -106,7 +106,7 @@ function processQueue(g){
   }
   if(g.pending.shark&&g.pending.sharkKilled&&!g.pending.followupDone){
     g.pending.followupDone=true;const a=findField(g,g.pending.shark);
-    if(a&&!a.c.sleep&&!a.c.suppressedBy){const targets=allUnits(g).map(c=>topCard(g,c.id)).filter((t,k,list)=>t&&t.kind!=='return'&&t.p!==a.p&&!t.c.sleep&&canReach(a,t)&&list.findIndex(x=>x?.c.id===t.c.id)===k).sort((x,y)=>y.c.hp-x.c.hp||x.s-y.s);if(targets.length){g.pending.queue.push({source:a.c.id,sourceP:a.p,target:targets[0].c.id,amount:1});log(g,`鲨鱼追击生命最高的${CARDS[targets[0].c.type].name}。`);processQueue(g);return;}}
+    if(a&&!a.c.sleep&&!a.c.suppressedBy){const targets=allUnits(g).map(c=>topCard(g,c.id)).filter((t,k,list)=>t&&t.kind!=='return'&&t.c.id!==a.c.id&&t.p===g.pending.sharkTargetPlayer&&!t.c.sleep&&canReach(a,t)&&list.findIndex(x=>x?.c.id===t.c.id)===k).sort((x,y)=>y.c.hp-x.c.hp||x.s-y.s);if(targets.length){g.pending.queue.push({source:a.c.id,sourceP:a.p,target:targets[0].c.id,amount:1});log(g,`鲨鱼追击生命最高的${CARDS[targets[0].c.type].name}。`);processQueue(g);return;}}
   }
   while(g.pending.returns.length){
     const ret=g.pending.returns[0];if(ret.c.hp<=0){g.pending.returns.shift();continue;}
@@ -115,7 +115,7 @@ function processQueue(g){
   }
   g.pending=null;if(!checkWin(g))maybeEnd(g);
 }
-function hit(g,items,shark){g.pending={kind:'damage',queue:items,returns:[],respondTo:null,shark:shark||null,sharkKilled:false,followupDone:false};processQueue(g);}
+function hit(g,items,shark,sharkTargetPlayer){g.pending={kind:'damage',queue:items,returns:[],respondTo:null,shark:shark||null,sharkTargetPlayer,sharkKilled:false,followupDone:false};processQueue(g);}
 function place(g,i,id,slot,setup=false){
   if(!Number.isInteger(slot)||slot<0||slot>3||fieldCard(g,i,slot))fail('请选择自己的空格位。');
   const c=g.players[i].hand.find(x=>x.id===id);if(!c||!unit(c))fail('请选择非一次性手牌。');
@@ -143,8 +143,10 @@ function applyMove(g,i,a,controlled=false,chain=[]){
   }
   if(type==='shark'){
     if(![0,1].includes(a.row))fail('请选择敌方一排。');
-    const targets=allUnits(g).map(c=>topCard(g,c.id)).filter((t,k,list)=>t&&t.kind!=='return'&&t.p!==src.p&&t.locationP===enemy(src.p)&&Math.floor(t.s/2)===a.row&&!t.c.sleep&&canReach(src,t)&&list.findIndex(x=>x?.c.id===t.c.id)===k);
-    if(!targets.length)fail('这一排没有可攻击的目标。');spend(g,i);log(g,`${p.name}令鲨鱼冲击敌方${a.row===0?'前':'后'}排。`);hit(g,targets.map(t=>({source:src.c.id,sourceP:src.p,target:t.c.id,amount:1,sharkPrimary:true})),src.c.id);return;
+    const targetPlayer=a.targetPlayer??(controlled?enemy(i):enemy(src.p));
+    if(![0,1].includes(targetPlayer)||(!controlled&&targetPlayer!==enemy(src.p)))fail('请选择可攻击的目标阵营。');
+    const targets=allUnits(g).map(c=>topCard(g,c.id)).filter((t,k,list)=>t&&t.kind!=='return'&&t.c.id!==src.c.id&&t.p===targetPlayer&&t.locationP===targetPlayer&&Math.floor(t.s/2)===a.row&&!t.c.sleep&&canReach(src,t)&&list.findIndex(x=>x?.c.id===t.c.id)===k);
+    if(!targets.length)fail('这一排没有可攻击的目标。');spend(g,i);log(g,`${p.name}令鲨鱼冲击${g.players[targetPlayer].name}的${a.row===0?'前':'后'}排。`);hit(g,targets.map(t=>({source:src.c.id,sourceP:src.p,target:t.c.id,amount:1,sharkPrimary:true})),src.c.id,targetPlayer);return;
   }
   if(type==='sunfish'){
     const tgt=findField(g,a.targetId);if(!tgt||tgt.p!==src.p||tgt.c.id===src.c.id||tgt.c.hp>=CARDS[tgt.c.type].hp)fail('请选择受伤的其他友方牌。');
