@@ -2,7 +2,7 @@
 
 本文从游戏的 `tide-card` systemd 服务**已经自启**开始。假设服务器是 Ubuntu/Debian，游戏在本机 `8080` 端口运行，而且你有一个能从公网访问的固定 IPv4。全文的 `203.0.113.10` 是示例地址，**每处都要换成你的服务器公网 IP**。
 
-现在不必购买域名：Let's Encrypt 已支持免费签发**公网 IP 证书**。这种证书有效期约 6 天，所以自动续期是本流程的必要部分。这里使用 Nginx 接收 80/443 请求，Certbot 申请和续期证书，现有 Node 服务继续运行在 8080。**不要照旧版的“把 IP 直接写进 Caddyfile”做**：Caddy 对 IP 默认可能使用本地 CA 签发证书，其他玩家的浏览器不会自动信任。
+现在不必购买域名：Let's Encrypt 已支持免费签发**公网 IP 证书**。这种证书有效期约 6 天，所以自动续期是本流程的必要部分。这里使用 Nginx 接收 80 和 HTTPS 端口的请求，Certbot 申请和续期证书，现有 Node 服务继续运行在 8080。HTTPS 默认使用 443；如果被其他服务占用，可按第 4 步改用 8443。**不要照旧版的“把 IP 直接写进 Caddyfile”做**：Caddy 对 IP 默认可能使用本地 CA 签发证书，其他玩家的浏览器不会自动信任。
 
 ## 1. 确认游戏和端口
 
@@ -14,15 +14,17 @@ curl http://127.0.0.1:8080/api/health
 sudo ss -ltnp
 ```
 
-健康检查应返回 `{"ok":true,"service":"tide-card-game"}`。确认 80 和 443 尚未被其他网站服务占用。如果游戏服务名或端口不同，后续命令中的相应值也要替换。
+健康检查应返回 `{"ok":true,"service":"tide-card-game"}`。确认 80 端口可供 Nginx 使用；如果 443 已被其他服务占用，按第 4 步的 8443 分支操作。如果游戏服务名或端口不同，后续命令中的相应值也要替换。
 
-在云服务商安全组和服务器防火墙开放 **TCP 80、443**。80 用于证书验证和 HTTP 跳转，443 用于游戏 HTTPS；请保留 SSH 使用的端口。若启用了 UFW，可运行：
+在云服务商安全组和服务器防火墙开放 **TCP 80、443**；使用 8443 分支时，改为确保 **80、8443** 开放。80 用于证书验证和 HTTP 跳转，443 或 8443 用于游戏 HTTPS；请保留 SSH 使用的端口。若启用了 UFW，可按实际使用的 HTTPS 端口运行：
 
 ```sh
 sudo ufw status
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 ```
+
+如果按下文使用 8443，则将最后一条改为 `sudo ufw allow 8443/tcp`。
 
 如果服务器没有独立公网 IP、位于无法转发 80/443 的 NAT 后面，或公网 IP 会频繁改变，本流程不能直接套用。
 
@@ -155,6 +157,18 @@ curl -i https://203.0.113.10/api/health
 ```
 
 用浏览器打开 `https://203.0.113.10/`，应能正常进入游戏，且浏览器不提示证书错误。两位玩家都使用这个 HTTPS 地址，并在游戏里选“当前页面的服务端”。
+
+### 如果 443 已被其他服务占用
+
+先运行 `sudo ss -ltnp | grep ':443'` 确认占用进程。**不要直接停止已有服务。**可以让游戏改用空闲的 `8443`：
+
+1. 运行 `sudo ss -ltnp | grep ':8443'`；没有输出才说明当前没有进程监听该端口。
+2. 在 `/etc/nginx/conf.d/tide-card-ip.conf` 的 HTTP `server` 块中，把 `return 301 https://$host$request_uri;` 改成 `return 301 https://$host:8443$request_uri;`。
+3. 在 HTTPS `server` 块中，把 `listen 443 ssl default_server;` 改成 `listen 8443 ssl default_server;`。证书路径、`server_name` 和 `proxy_pass http://127.0.0.1:8080;` 保持不变。
+4. 运行 `sudo nginx -t && sudo systemctl restart nginx`。检查 `sudo ss -ltnp | grep ':8443'`，应看到 `nginx`。
+5. 在云安全组和系统防火墙开放 **TCP 8443**，然后访问 `https://你的公网IP:8443/` 和 `https://你的公网IP:8443/api/health`。客户端的“服务端网址”也要填写带 `:8443` 的完整地址。
+
+**80 端口仍须保持可用**，供 Certbot 的 `webroot` 验证和后续自动续期使用。证书验证的是 IP，不要求 HTTPS 一定运行在 443 端口。下文的验证地址也应相应改为 `:8443`。
 
 ## 5. 设置并测试自动续期
 
