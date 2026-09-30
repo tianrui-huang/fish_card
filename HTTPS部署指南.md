@@ -127,7 +127,7 @@ server {
 }
 
 server {
-    listen 443 ssl;
+    listen 443 ssl default_server;
     server_name 203.0.113.10;
 
     ssl_certificate /etc/letsencrypt/live/tide-card-ip/fullchain.pem;
@@ -143,6 +143,8 @@ server {
     }
 }
 ```
+
+用 IP 访问 HTTPS 时，客户端通常不会发送域名 SNI；`default_server` 让 Nginx 在没有 SNI 的连接上也送出这张 IP 证书。如果 `sudo nginx -t` 提示已有其他 `default_server`，先检查现有 443 站点配置，不能在同一监听地址上重复设置默认站点。
 
 `proxy_buffering off` 用于让游戏的 SSE 实时状态及时传给玩家。检查并加载配置：
 
@@ -193,6 +195,7 @@ sudo nginx -t
 - **申请失败：**确认使用的是公网 IP，80 端口能从外网访问挑战文件，Certbot 版本至少 5.4。
 - **HTTPS 返回 502：**检查 `curl http://127.0.0.1:8080/api/health` 是否成功，以及 Nginx 的 `proxy_pass` 端口。
 - **浏览器报证书错误：**核对访问的 IP 是否与证书里的 IP 相同、证书是否为正式签发、证书是否已过期。不要用 `curl -k` 或忽略浏览器警告来代替修复。
+- **提示证书名称与 IP 不匹配：**分别运行 `sudo openssl x509 -in /etc/letsencrypt/live/tide-card-ip/fullchain.pem -noout -ext subjectAltName` 和 `echo | openssl s_client -connect 203.0.113.10:443 2>/dev/null | openssl x509 -noout -ext subjectAltName`。两处都应包含 `IP Address:203.0.113.10`；若只有前者正确，检查 443 站点的 `default_server` 和证书路径，然后 `sudo nginx -t && sudo systemctl reload nginx`。
 - **续期失败：**查看 `sudo certbot renew --dry-run --run-deploy-hooks` 的输出，确认 80 端口和挑战路径持续可用。
 
 ## 官方资料
