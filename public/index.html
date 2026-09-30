@@ -2,11 +2,12 @@
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>潮汐卡牌 · 海洋对决</title><link rel="stylesheet" href="/app.css"></head>
 <body>
   <div class="site-shell">
-    <header class="topbar"><div class="brand"><span class="brand-mark">◈</span><div><strong>潮汐卡牌</strong><small>OCEAN DUEL · 初版</small></div></div><div id="room-chip" class="room-chip"></div><div class="top-actions"><span id="connection" class="connection">未连接</span><button id="rules-button" class="ghost small">玩法说明</button></div></header>
+    <header class="topbar"><div class="brand"><span class="brand-mark">◈</span><div><strong>潮汐卡牌</strong><small>OCEAN DUEL · 初版</small></div></div><div id="room-chip" class="room-chip"></div><div class="top-actions"><span id="connection" class="connection">未连接</span><button id="room-menu-button" class="ghost small" hidden>返回大厅</button><button id="rules-button" class="ghost small">玩法说明</button></div></header>
     <main id="app"></main>
     <footer class="footer">原创界面与卡面概念 · 当前牌池与规则仍可调整</footer>
   </div>
   <div id="toast" class="toast" role="status"></div>
+  <dialog id="room-menu" aria-labelledby="room-menu-title"><button id="room-menu-close" class="dialog-close" aria-label="关闭">×</button><div class="hero-eyebrow">ROOM OPTIONS</div><h2 id="room-menu-title">返回大厅</h2><p id="room-menu-description"></p><div class="room-menu-actions"><button id="keep-room" class="primary">暂时保留房间并返回</button><button id="abandon-room" class="danger-button">放弃房间并返回</button><button id="cancel-room-menu" class="ghost">继续留在房间</button></div><p id="room-menu-error" class="menu-error" role="alert"></p></dialog>
   <dialog id="rules"><form method="dialog"><button class="dialog-close" aria-label="关闭">×</button></form><h2>玩法速览</h2><p>两人各随机获得六张牌。猜拳败者先摆三张，胜者看后摆三张并先行动。</p><p>每回合获得一点行动点。上牌和一次性牌免费；攻击与大多数主动技能消耗一点，耗尽后自动换人。主动连续弃权两次判负。</p><p>各有前后两排，每排两格。前排能攻击对方前后排；后排只能攻击对方前排。睡眠中的牌不能行动，也不能被攻击。睡眠覆盖目标两次回合，在施加者第二次回合开始时解除。</p><p>袋鼠腾空立即获得1势能，之后自己回合开始累积，最多3层。落击或受伤反击造成1+势能伤害并解除腾空；睡眠暂停累积。</p><p>大象只能压制敌方，清除其技能状态并移至其上。攻击该格位会伤到大象，并使被压牌受1伤、解除压制。受击后的返回免费，由持有者选择空格；主动返回消耗1点，无空位则死亡。</p><p>鲸先选择敌牌，再选择它的一次耗点行动，全部共耗1点。被操控牌位置与射程不变，普通攻击可打其原本友方，免费技能不能使用。</p><p>企鹅挡伤会暂停结算，等待防守方选择。海星可复活双方弃牌堆的牌；翻车鱼和螃蟹可消耗最后一点生命发动技能。</p><p>点击场上牌查看详情；选择己方牌操作，点击手牌选择上场或一次性效果。</p><p class="muted">十一种牌按规则数量组成42张共享牌堆，双方各随机抽六张，不放回；目前无后续摸牌。开局手牌至少含三张非一次性牌。</p></dialog>
   <script type="module" src="/app.js"></script>
 </body></html>
