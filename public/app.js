@@ -221,14 +221,32 @@ function intentText(){
   const map={place:['选择空格','点击自己半场的空格上场。'],attack:['选择攻击目标','点击高亮的射程内目标。'],sloth:['选择睡眠目标','敌牌睡至施加者第二次回合开始。'],shark:['选择一排','选择目标阵营的一排；鲸操控时可选择双方，位置与射程不变。'],starDiscard:['选择复活牌','从双方弃牌堆选一张非一次性牌。'],starSlot:['选择复活位置','点击自己的空格。'],seahorse:['选择夺取方式','点击敌方场上牌，或盲抽手牌。'],sunfish:['选择治疗目标','点击受伤的其他友方牌。'],onceSloth:['选择目标排','敌方该排进入睡眠。'],kangaroo:['选择落击目标','消耗1点，解除腾空并造成1+势能的伤害。'],elephant:['选择压制目标','只能压制敌方。其技能状态会被清除。'],elephantReturn:['选择返回位置','点击大象原持有者半场的空格，主动返回消耗1点。'],whale:['选择要操控的牌','选择敌牌，再为它指定一次耗点行为；全部共耗1点。']};
   const item=map[intent?.kind];return item?{title:item[0],body:item[1]}:{title:'选择行动',body:isMyTurn()?'点击场上己方牌发动技能，或选择手牌。':'等待行动或查看卡牌。'};
 }
+function damageUnitLabel(unit){
+  if(!unit)return '未知卡牌';
+  const name=state.players[unit.player]?.name||'玩家',side=unit.player===state.you?'你':'对手';
+  const half=unit.locationPlayer!==unit.player?'位于'+state.players[unit.locationPlayer]?.name+'半场的':'';
+  const position=Number.isInteger(unit.slot)?' · '+half+(unit.slot<2?'前':'后')+'排'+(unit.slot%2?'右':'左')+'格':'';
+  return name+'（'+side+'）的'+cardData(unit.type).name+position;
+}
+function damageNoticeHTML(info, pending=false){
+  if(!info)return '';
+  const kind=state.damageKinds?.[info.kind]||'攻击',controller=info.source&&info.controller!==info.source.player
+    ?'<p class="damage-controller">由'+esc(state.players[info.controller]?.name)+'的鲸操控</p>':'';
+  return '<article class="damage-notice '+(pending?'damage-pending':'')+'"><div class="damage-notice-heading"><span>'+(pending?'正在攻击':'最近伤害')+'</span><b>'+esc(kind)+'</b><strong>'+info.amount+' 点伤害</strong></div><p class="damage-source">'+esc(damageUnitLabel(info.source))+'</p><div class="damage-arrow">↓</div><p class="damage-target">'+esc(damageUnitLabel(info.target))+'</p>'+controller+(info.intercepted?'<p class="damage-intercepted">🐧 企鹅替'+esc(damageUnitLabel(info.intendedTarget))+'挡伤</p>':'')+'</article>';
+}
+function damageNoticesHTML(){
+  const pending=state.pending?.attack;
+  const recent=(state.damageEvents||[]).slice(-3).reverse();
+  return pending||recent.length?'<section class="damage-notices" aria-label="伤害来源" aria-live="polite">'+damageNoticeHTML(pending,true)+recent.map(x=>damageNoticeHTML(x)).join('')+'</section>':'';
+}
 function actionPanel(){
   const p=me(),selected=locate(intent?.actorId)?.c,text=intentText(),controlled=!!intent?.control?.length;
   if(state.pending?.kind==='return'){
     if(state.pending.respondTo!==state.you)return '<h3 class="choice-title">大象返回</h3><p>等待大象持有者选择返回位置。</p>';
     return `<h3 class="choice-title">大象免费返回</h3><p>剩余 ${state.pending.returnCard?.hp} 生命。点击自己的空格，或选择下面的位置。</p>${p.field.map((c,s)=>!c?`<button class="option" data-return="${s}">${s<2?'前':'后'}排${s%2?'右':'左'}格</button>`:'').join('')}`;
   }
-  if(state.pending?.respondTo===state.you){const penguins=p.field.filter(c=>c?.type==='penguin'&&!c.sleep&&!c.suppressedBy&&c.id!==topAt(state.pending.target)?.c.id);return `<h3 class="choice-title">企鹅挡伤</h3><p>选择企鹅替目标承受本次伤害，或放行。</p>${penguins.map(c=>`<button class="option" data-intercept="${c.id}">🐧 企鹅挡伤</button>`).join('')}<button class="secondary full" data-intercept="">放行</button>`;}
-  if(state.pending)return '<h3 class="choice-title">伤害结算中</h3><p>等待防守方响应。</p>';
+  if(state.pending?.respondTo===state.you){const penguins=p.field.filter(c=>c?.type==='penguin'&&!c.sleep&&!c.suppressedBy&&c.id!==topAt(state.pending.target)?.c.id);return `<h3 class="choice-title">企鹅挡伤</h3>${damageNoticeHTML(state.pending.attack,true)}<p>选择企鹅替上方目标承受伤害，或放行。</p>${penguins.map(c=>{const a=locate(c.id);return `<button class="option" data-intercept="${c.id}">🐧 ${a.s<2?'前':'后'}排${a.s%2?'右':'左'}格企鹅挡伤 · 生命 ${c.hp}</button>`;}).join('')}<button class="secondary full" data-intercept="">放行</button>`;}
+  if(state.pending)return '<h3 class="choice-title">伤害结算中</h3>'+damageNoticeHTML(state.pending.attack,true)+'<p>等待防守方响应。</p>';
   if(state.phase==='ended')return `<h3 class="choice-title">对局结束</h3><p>${esc(state.players[state.winner]?.name)}获胜。</p>`;
   let h=selectedCard(chosenHand);if(intent&&intent.kind!=='actor')h=null;
   if(h){const d=cardData(h.type);let b=`<h3 class="choice-title">${esc(d.name)}</h3><p>${esc(d.text)}</p>`;
@@ -269,6 +287,7 @@ function battleScreen(){
   const cardRows=(owner,side)=>renderRows(owner,side);
   app.innerHTML=`<div class="game-layout"><section class="arena"><div class="player-strip"><div><strong>${esc(o.name)}</strong> <span>对手 · ${o.handCount} 张手牌</span></div><div>${state.turn===1-state.you?'<span class="turn-badge">对手行动</span>':''}<div class="back-row">${Array.from({length:Math.min(o.handCount,8)},()=>'<i class="mini-back">✦</i>').join('')}</div></div></div><div class="battlefield"><div class="zone-title">${esc(o.name)} · 敌方半场</div>${cardRows(o,'enemy')}<div class="middle-line">潮 汐 分 界</div>${cardRows(p,'mine')}<div class="zone-title">你的半场</div></div><div class="hand-area"><div class="hand-heading"><strong>你的手牌</strong><span>${p.hand.length} 张 · ${mineTurn?`行动点 ${state.ap}`:'等待中'}</span></div><div class="hand-cards"><div class="hand-track">${p.hand.map(c=>cardHTML(c,{hand:true,selected:chosenHand===c.id})).join('')}</div></div></div><div class="player-strip" style="margin-top:12px"><strong>你的弃牌堆 <span>(${p.discard.length})</span></strong><span>${p.discard.length?p.discard.map(c=>`<button class="ghost small" data-discard="${esc(c.id)}">${esc(cardData(c.type).name)}</button>`).join(' '):'暂无弃牌'}</span></div></section><aside class="side-panel"><h2>对局状态</h2><p class="phase-text">${state.pending?.kind==='return'?(state.pending.respondTo===state.you?'请选择大象返回的位置。':'等待对手选择大象返回位置。'):state.pending?.respondTo===state.you?'你的企鹅可以拦截这次伤害。':mineTurn?'轮到你行动。场地至少保留一张己方牌。':`等待${esc(o.name)}行动。`}</p><div class="stat-line"><div class="stat"><strong>${state.ap}</strong><span>行动点</span></div><div class="stat"><strong>${state.round}</strong><span>当前回合</span></div><div class="stat"><strong>${p.passes}</strong><span>连续弃权</span></div></div><div class="action-panel">${actionPanel()}</div><button class="secondary full pass-button" data-pass="1" ${!mineTurn?'disabled':''}>放弃行动点 · 结束回合</button><h2 class="log-title">战况记录</h2><div class="log">${[...state.log].reverse().map(x=>`<div class="log-entry">${esc(x)}</div>`).join('')}</div></aside></div>`;
   app.querySelector('.arena > .player-strip').insertAdjacentHTML('afterend',`<div class="opponent-discard"><strong>对手弃牌堆 <span>(${o.discard.length})</span></strong><div>${o.discard.length?o.discard.map(c=>`<button class="ghost small" data-discard="${esc(c.id)}">${esc(cardData(c.type).name)}</button>`).join(' '):'<span>暂无弃牌</span>'}</div></div>`);
+  app.querySelector('.battlefield').insertAdjacentHTML('beforebegin',damageNoticesHTML());
   if(state.phase==='ended'){app.querySelector('.game-layout').inert=true;app.insertAdjacentHTML('beforeend',resultOverlay());}
   wire();
 }

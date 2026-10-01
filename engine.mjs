@@ -14,6 +14,7 @@ export const CARDS = {
   whale: { name:'鲸', kind:'unit', hp:2, suit:'靛', text:'攻击1。操控一张敌牌执行一次耗点行动，共耗1点。位置与射程不变，攻击可选双方其他牌。' },
 };
 export const CARD_TYPES = Object.keys(CARDS);
+export const DAMAGE_KINDS = { attack:'普攻', sharkSkill:'技能 · 鲨鱼群攻', sharkFollowup:'技能 · 鲨鱼追击', kangarooLanding:'技能 · 袋鼠落击', kangarooCounter:'被动 · 袋鼠反击', urchinReflect:'被动 · 海胆反伤', elephantRelease:'技能 · 压制附加伤害' };
 export const POOL_COUNTS = {starfish:2,seahorse:2,shark:3,kangaroo:3,crab:4,whale:4,urchin:4,elephant:4,sloth:5,penguin:5,sunfish:6};
 export const POOL = Object.entries(POOL_COUNTS).flatMap(([type,count])=>Array(count).fill(type));
 const uid = () => randomBytes(8).toString('hex');
@@ -79,34 +80,46 @@ function removeDead(g,a){
 }
 function penguins(g,target){return g.players[target.p].field.filter(c=>c?.type==='penguin'&&!c.sleep&&!c.suppressedBy&&c.id!==target.c.id);}
 function damageTarget(g,item){return item.direct?findField(g,item.target):topCard(g,item.target);}
+function unitInfo(a){return a&&{id:a.c.id,type:a.c.type,player:a.p,slot:a.s,locationPlayer:a.locationP??a.p};}
+function stampDamage(g,item){return {...item,kind:item.kind||'attack',sourceInfo:item.sourceInfo||unitInfo(findField(g,item.source)),controllerP:item.controllerP??item.sourceP};}
+function damageInfo(g,item,target=damageTarget(g,item)){
+  return {kind:item.kind||'attack',source:item.sourceInfo||unitInfo(findField(g,item.source)),controller:item.controllerP??item.sourceP,target:unitInfo(target),amount:item.amount};
+}
+function unitLabel(g,a){return a?`${g.players[a.player].name}的${CARDS[a.type].name}（${a.locationPlayer!==a.player?`位于${g.players[a.locationPlayer].name}半场的`:''}${a.slot<2?'前':'后'}排${a.slot%2?'右':'左'}格）`:'未知卡牌';}
+function damageLabel(g,info){const controlled=info.source&&info.controller!==info.source.player?`（由${g.players[info.controller].name}的鲸操控）`:'';return `${unitLabel(g,info.source)}${controlled}使用${DAMAGE_KINDS[info.kind]||'伤害'}攻击${unitLabel(g,info.target)}`;}
 function damage(g,item,interceptId){
   let target=damageTarget(g,item);if(!target)return;
-  if(interceptId){const penguin=penguins(g,target).find(c=>c.id===interceptId);if(!penguin)fail('无法使用这张企鹅挡伤。');target=findField(g,penguin.id);log(g,`${g.players[target.p].name}的企鹅挡下攻击。`);}
+  const intended=damageInfo(g,item,target);
+  if(interceptId){const penguin=penguins(g,target).find(c=>c.id===interceptId);if(!penguin)fail('无法使用这张企鹅挡伤。');target=findField(g,penguin.id);log(g,`${unitLabel(g,unitInfo(target))}替${unitLabel(g,intended.target)}挡下${unitLabel(g,intended.source)}的${DAMAGE_KINDS[intended.kind]}（${item.amount}点伤害）。`);}
   const source=findField(g,item.source),c=target.c;
+  const defender=unitInfo(target);
   const counter=c.airborne?1+(c.gravity||0):0;
   if(counter){delete c.airborne;delete c.gravity;log(g,'袋鼠受伤，解除腾空并反击。');}
   const cover=target.kind==='cover'?target.cover:null;
   if(cover){detachCover(g,cover);target={p:target.p,s:target.s,locationP:target.locationP,c,kind:'return'};g.pending.returns.push({p:target.p,s:target.s,locationP:target.locationP,c});log(g,'大象受伤，解除压制并准备免费返回。');}
-  c.hp-=item.amount;log(g,`${CARDS[c.type].name}受到${item.amount}点伤害。`);
+  c.hp-=item.amount;
+  const info={...intended,target:defender,intendedTarget:intended.target,intercepted:!!interceptId,id:(g.damageSequence||0)+1};
+  g.damageSequence=info.id;g.damageEvents=[...(g.damageEvents||[]),info].slice(-12);
+  log(g,`${damageLabel(g,info)}，造成${item.amount}点伤害。`);
   const killed=removeDead(g,target);if(killed&&item.sharkPrimary)g.pending.sharkKilled=true;
   // 被压牌的附加伤害来自大象；先结算，再让存活的大象选择返回位置。
   const follow=[];
-  if(cover)follow.push({source:c.id,sourceP:target.p,target:cover.targetId,amount:1,direct:true,noIntercept:true});
-  if(c.type==='urchin'&&source&&!item.reflection)follow.push({source:c.id,sourceP:target.p,target:source.c.id,amount:1,reflection:true,noIntercept:true,direct:true});
-  if(counter&&source)follow.push({source:c.id,sourceP:target.p,target:source.c.id,amount:counter,direct:true});
-  g.pending.queue.unshift(...follow);
+  if(cover)follow.push({source:c.id,sourceP:target.p,sourceInfo:defender,kind:'elephantRelease',target:cover.targetId,amount:1,direct:true,noIntercept:true});
+  if(c.type==='urchin'&&source&&!item.reflection)follow.push({source:c.id,sourceP:target.p,sourceInfo:defender,kind:'urchinReflect',target:source.c.id,amount:1,reflection:true,noIntercept:true,direct:true});
+  if(counter&&source)follow.push({source:c.id,sourceP:target.p,sourceInfo:defender,kind:'kangarooCounter',target:source.c.id,amount:counter,direct:true});
+  g.pending.queue.unshift(...follow.map(item=>stampDamage(g,item)));
 }
 function processQueue(g){
   g.pending.respondTo=null;g.pending.kind='damage';
   while(g.pending.queue.length){
     const item=g.pending.queue[0],target=damageTarget(g,item);
     if(!target){g.pending.queue.shift();continue;}
-    if(!item.noIntercept&&g.turn!==target.p&&penguins(g,target).length){g.pending.respondTo=target.p;log(g,`${g.players[target.p].name}可选择企鹅挡伤。`);return;}
+    if(!item.noIntercept&&g.turn!==target.p&&penguins(g,target).length){g.pending.respondTo=target.p;log(g,`${damageLabel(g,damageInfo(g,item,target))}，预计${item.amount}点伤害；${g.players[target.p].name}可选择企鹅挡伤。`);return;}
     g.pending.queue.shift();damage(g,item);
   }
   if(g.pending.shark&&g.pending.sharkKilled&&!g.pending.followupDone){
     g.pending.followupDone=true;const a=findField(g,g.pending.shark);
-    if(a&&!a.c.sleep&&!a.c.suppressedBy){const targets=allUnits(g).map(c=>topCard(g,c.id)).filter((t,k,list)=>t&&t.kind!=='return'&&t.c.id!==a.c.id&&t.p===g.pending.sharkTargetPlayer&&!t.c.sleep&&canReach(a,t)&&list.findIndex(x=>x?.c.id===t.c.id)===k).sort((x,y)=>y.c.hp-x.c.hp||x.s-y.s);if(targets.length){g.pending.queue.push({source:a.c.id,sourceP:a.p,target:targets[0].c.id,amount:1});log(g,`鲨鱼追击生命最高的${CARDS[targets[0].c.type].name}。`);processQueue(g);return;}}
+    if(a&&!a.c.sleep&&!a.c.suppressedBy){const targets=allUnits(g).map(c=>topCard(g,c.id)).filter((t,k,list)=>t&&t.kind!=='return'&&t.c.id!==a.c.id&&t.p===g.pending.sharkTargetPlayer&&!t.c.sleep&&canReach(a,t)&&list.findIndex(x=>x?.c.id===t.c.id)===k).sort((x,y)=>y.c.hp-x.c.hp||x.s-y.s);if(targets.length){g.pending.queue.push(stampDamage(g,{source:a.c.id,sourceP:a.p,controllerP:g.pending.sharkController,kind:'sharkFollowup',target:targets[0].c.id,amount:1}));log(g,`鲨鱼追击生命最高的${CARDS[targets[0].c.type].name}。`);processQueue(g);return;}}
   }
   while(g.pending.returns.length){
     const ret=g.pending.returns[0];if(ret.c.hp<=0){g.pending.returns.shift();continue;}
@@ -115,7 +128,7 @@ function processQueue(g){
   }
   g.pending=null;if(!checkWin(g))maybeEnd(g);
 }
-function hit(g,items,shark,sharkTargetPlayer){g.pending={kind:'damage',queue:items,returns:[],respondTo:null,shark:shark||null,sharkTargetPlayer,sharkKilled:false,followupDone:false};processQueue(g);}
+function hit(g,items,shark,sharkTargetPlayer){g.pending={kind:'damage',queue:items.map(item=>stampDamage(g,item)),returns:[],respondTo:null,shark:shark||null,sharkTargetPlayer,sharkController:items[0]?.controllerP,sharkKilled:false,followupDone:false};processQueue(g);}
 function place(g,i,id,slot,setup=false){
   if(!Number.isInteger(slot)||slot<0||slot>3||fieldCard(g,i,slot))fail('请选择自己的空格位。');
   const c=g.players[i].hand.find(x=>x.id===id);if(!c||!unit(c))fail('请选择非一次性手牌。');
@@ -133,7 +146,7 @@ function applyMove(g,i,a,controlled=false,chain=[]){
   if(a.type==='attack'){
     const tgt=topCard(g,a.targetId);
     if(!tgt||tgt.c.id===src.c.id||(!controlled&&tgt.p===src.p)||(tgt.kind==='cover'&&tgt.p===i)||tgt.c.sleep||!canReach(src,tgt))fail('目标不在攻击范围内、正在睡眠，或是己方压制中的大象。');
-    spend(g,i);log(g,`${p.name}令${CARDS[type].name}攻击${CARDS[tgt.c.type].name}。`);hit(g,[{source:src.c.id,sourceP:src.p,target:tgt.c.id,amount:1}]);return;
+    spend(g,i);log(g,`${p.name}令${CARDS[type].name}攻击${CARDS[tgt.c.type].name}。`);hit(g,[{source:src.c.id,sourceP:src.p,controllerP:i,kind:'attack',target:tgt.c.id,amount:1}]);return;
   }
   if(a.type!=='skill')fail('未知行动。');
   if(controlled&&['sunfish','crab','urchin','penguin'].includes(type))fail('鲸只能操控会消耗行动点的行为。');
@@ -146,7 +159,7 @@ function applyMove(g,i,a,controlled=false,chain=[]){
     const targetPlayer=a.targetPlayer??(controlled?enemy(i):enemy(src.p));
     if(![0,1].includes(targetPlayer)||(!controlled&&targetPlayer!==enemy(src.p)))fail('请选择可攻击的目标阵营。');
     const targets=allUnits(g).map(c=>topCard(g,c.id)).filter((t,k,list)=>t&&t.kind!=='return'&&t.c.id!==src.c.id&&t.p===targetPlayer&&t.locationP===targetPlayer&&Math.floor(t.s/2)===a.row&&!t.c.sleep&&canReach(src,t)&&list.findIndex(x=>x?.c.id===t.c.id)===k);
-    if(!targets.length)fail('这一排没有可攻击的目标。');spend(g,i);log(g,`${p.name}令鲨鱼冲击${g.players[targetPlayer].name}的${a.row===0?'前':'后'}排。`);hit(g,targets.map(t=>({source:src.c.id,sourceP:src.p,target:t.c.id,amount:1,sharkPrimary:true})),src.c.id,targetPlayer);return;
+    if(!targets.length)fail('这一排没有可攻击的目标。');spend(g,i);log(g,`${p.name}令鲨鱼冲击${g.players[targetPlayer].name}的${a.row===0?'前':'后'}排。`);hit(g,targets.map(t=>({source:src.c.id,sourceP:src.p,controllerP:i,kind:'sharkSkill',target:t.c.id,amount:1,sharkPrimary:true})),src.c.id,targetPlayer);return;
   }
   if(type==='sunfish'){
     const tgt=findField(g,a.targetId);if(!tgt||tgt.p!==src.p||tgt.c.id===src.c.id||tgt.c.hp>=CARDS[tgt.c.type].hp)fail('请选择受伤的其他友方牌。');
@@ -154,7 +167,7 @@ function applyMove(g,i,a,controlled=false,chain=[]){
   }
   if(type==='crab'){src.c.hp--;g.ap++;log(g,`${p.name}的螃蟹换得1点额外行动点。`);removeDead(g,src);checkWin(g);return;}
   if(type==='kangaroo'){
-    if(src.c.airborne){const tgt=topCard(g,a.targetId);if(!tgt||tgt.c.id===src.c.id||(!controlled&&tgt.p===src.p)||(tgt.kind==='cover'&&tgt.p===i)||tgt.c.sleep||!canReach(src,tgt))fail('请选择射程内未睡眠的攻击目标；不能攻击己方压制中的大象。');const amount=1+(src.c.gravity||0);spend(g,i);delete src.c.airborne;delete src.c.gravity;log(g,`${p.name}令袋鼠落击，造成${amount}点伤害。`);hit(g,[{source:src.c.id,sourceP:src.p,target:tgt.c.id,amount}]);}
+    if(src.c.airborne){const tgt=topCard(g,a.targetId);if(!tgt||tgt.c.id===src.c.id||(!controlled&&tgt.p===src.p)||(tgt.kind==='cover'&&tgt.p===i)||tgt.c.sleep||!canReach(src,tgt))fail('请选择射程内未睡眠的攻击目标；不能攻击己方压制中的大象。');const amount=1+(src.c.gravity||0);spend(g,i);delete src.c.airborne;delete src.c.gravity;log(g,`${p.name}令袋鼠落击，造成${amount}点伤害。`);hit(g,[{source:src.c.id,sourceP:src.p,controllerP:i,kind:'kangarooLanding',target:tgt.c.id,amount}]);}
     else{spend(g,i);src.c.airborne=true;src.c.gravity=1;log(g,`${p.name}令袋鼠腾空（势能1/3）。`);maybeEnd(g);}return;
   }
   if(type==='elephant'){
@@ -212,5 +225,5 @@ export function act(g,i,a){const next=structuredClone(g);applyAction(next,i,a);O
 export function view(g,i){
   const safe=p=>({name:p.name,field:p.field,discard:p.discard,handCount:p.hand.length,passes:p.passes,placed:p.placed,rpsReady:!!p.rps});
   const players=g.players.map(safe);players[i].hand=g.players[i].hand;
-  return {code:g.code,phase:g.phase,players,covering:g.covering||[],you:i,turn:g.turn,first:g.first,setup:g.setup,ap:g.ap,round:g.round,pending:g.pending&&{kind:g.pending.kind,respondTo:g.pending.respondTo,target:g.pending.queue[0]?.target,returnCardId:g.pending.returnCardId,returnCard:g.pending.returns[0]?.c},winner:g.winner,log:g.log,version:g.version,cards:CARDS};
+  return {code:g.code,phase:g.phase,players,covering:g.covering||[],you:i,turn:g.turn,first:g.first,setup:g.setup,ap:g.ap,round:g.round,pending:g.pending&&{kind:g.pending.kind,respondTo:g.pending.respondTo,target:g.pending.queue[0]?.target,attack:g.pending.kind==='damage'&&g.pending.queue[0]?damageInfo(g,g.pending.queue[0]):null,returnCardId:g.pending.returnCardId,returnCard:g.pending.returns[0]?.c},damageEvents:g.damageEvents||[],damageKinds:DAMAGE_KINDS,winner:g.winner,log:g.log,version:g.version,cards:CARDS};
 }
