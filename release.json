@@ -1,0 +1,16 @@
+{
+  "protocol": 1,
+  "version": "2026.10.01.1",
+  "files": {
+    "server.mjs": "793e0acd5ef58f5d0ab05bb83514fce8d1ef4777b191edd357ef1ec1d83a3432",
+    "room-store.mjs": "050fab1a979990191552b659565deee7527d2b033426798776f1f36917cdce36",
+    "engine.mjs": "7f8474f14102d6ef4cfb533291096cae4c4a059f5fe01529c4aa41d883648ab2",
+    "release-integrity.mjs": "9357fbc93f300cd6b87403bd91600d9f4b98f4f0c0e38b04b1d9874de7f824ba",
+    "public/index.html": "349b66fed3662d53ede932586219869c6eec1f30244fbf780f9cb2f99f25c038",
+    "public/app.js": "6dad50ba69b36c76619e77e1c2c4b898772a798bdd5ef89e06951c16429a7f47",
+    "public/app.css": "7318df60b62177bfa4abbf961266c8ecd68051fc788822e57b0cbb2a765c5c57",
+    "public/integrity.mjs": "1083f6c8aa9d50aec9caa1e59ace24e0869117ecc9d792bb63c78e54a3f38f62",
+    "public/release.json": "e4858fffd4a3fc88cf170de8745023b809b1546eb277a00432e35ca1d0f64b0d"
+  },
+  "releaseId": "917c577dc48414d3fc0d892f81677b29af51dec144b534a2a6b708e91eafda29"
+}

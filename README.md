@@ -9,7 +9,18 @@
 
 创建房间等待朋友、猜拳及等待对手出拳时，都会显示六张完整手牌。点击卡牌可查看完整技能说明；窄屏下可左右滚动查看。
 
-客户端可以连接当前网页所在的服务端，也可以在大厅选择“自定义公网服务端”并填写服务器网址。双方需要连接同一服务端，再使用房间号创建或加入对局。服务端支持跨域客户端连接和 `/api/health` 健康检查。
+大厅有三个服务端选项：“当前页面的服务端”“自定义服务端”“官方服务器”。官方服务器已预设地址，玩家直接选择，再输入房间号即可；等待画面、暂存房间和复制的官方联机信息均显示名称。双方需要选择同一服务端。服务端支持跨域客户端连接和 `/api/health` 健康检查。
+
+## 版本与文件校验
+
+- 当前发布版本为 `2026.10.01.1`。局域网和公网均使用同一套校验。
+- 服务端启动时按根目录 `release.json` 检查四个服务端模块和全部网页文件的 SHA-256。缺失、混用旧文件或内容被修改时拒绝启动；启动后只发送本次已验证的网页文件。
+- 客户端在创建、加入及恢复房间前读取网页文件的实际内容并计算 SHA-256，核对发布清单，再由目标服务端检查协议、发布摘要、规则文件摘要和每个网页文件摘要。只有版本号相同仍不能通过校验。
+- 校验成功产生五分钟有效、仅能使用一次的入房凭据；房间和玩家凭据绑定服务端的发布摘要，双方必须与同一发布一致。恢复暂存房间及刷新后重新校验。
+- 修改客户端的血量、伤害、行动点或射程不能修改对局规则；每个行动仍由服务端的 `engine.mjs` 判断和结算。
+- 浏览器上报的摘要可以被专门编写的客户端伪造，不能证明用户电脑上所有文件都未改过。发布清单也不是数字签名；它主要检查文件完整性、版本一致性和意外修改。控制局域网主机的人可以同时改服务端与校验程序，无法靠此机制证明房主可信；竞争性对局应连接你管理的官方服务端。IP 在普通界面中隐藏，但网络连接和源码仍能查到地址。
+
+SHA-256 在 HTTPS／localhost 优先使用浏览器的 Web Crypto；普通局域网 HTTP 使用内置实现，避免依赖安全上下文。相关限制见 [MDN 的 digest 文档](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest)。服务端独立验证请求的原则见 [MDN 网站安全说明](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Server-side/First_steps/Website_security)。
 
 ## 房间与返回大厅
 
@@ -21,17 +32,29 @@
 
 ## Windows 启动与分发
 
-直接使用 `fish-windows-launcher.zip`，完整解压后双击 `启动游戏.cmd`。手动打包时，将启动脚本、`server.mjs`、`room-store.mjs`、`engine.mjs`、整个 `public/` 和 `node-v24.21.0-x64.msi` 放在同一个文件夹。游戏不需要 npm 包。
+直接使用 `fish-windows-launcher.zip`，完整解压后双击 `启动游戏.cmd`。手动打包时，将启动脚本、`server.mjs`、`room-store.mjs`、`engine.mjs`、`release-integrity.mjs`、根目录 `release.json`、整个 `public/` 和 `node-v24.21.0-x64.msi` 放在同一个文件夹。游戏不需要 npm 包。
 
 脚本先检查可用的 Node.js 18+，已有环境直接启动。缺失时优先通过 WinGet 安装；WinGet 不可用、连接失败或安装未成功时，自动调用随包提供的 Node.js 24.21.0 x64 安装包，无需下载安装文件。离线安装包适用于64位 Windows；安装时可能出现管理员确认，完成后脚本会重新查找 Node 并启动。安装失败的日志在 `%TEMP%\tide-card-node-install.log`。安装包已核验 OpenJS Foundation 的有效数字签名；大文件保留在工作目录和分发 ZIP 中，不纳入 Git。
 
-在浏览器打开启动窗口显示的 `http://localhost:端口`。联机时选择“自定义公网服务端”，填写 `https://67.216.204.198:8443`，两名玩家使用同一地址和房间号。也可以直接打开服务器上的游戏网页，此时玩家电脑无需运行启动脚本。本机或局域网测试仍可运行 `node server.mjs`；默认从 8080 端口开始，端口被占用时会自动尝试后续端口。
+在浏览器打开启动窗口显示的 `http://localhost:端口`。公网联机时直接选择“官方服务器”，两名玩家使用同一房间号。维护者预设地址为 `https://67.216.204.198:8443`。也可以直接打开服务器上的游戏网页，此时玩家电脑无需运行启动脚本。本机或局域网测试仍可运行 `node server.mjs`；默认从 8080 端口开始，端口被占用时会自动尝试后续端口。
 
 ## 服务端维护
 
-Linux 服务端需要 Node.js 18+，文件为 `server.mjs`、`room-store.mjs`、`engine.mjs` 和 `public/`。规则由 `engine.mjs` 结算，房间与凭据由 `room-store.mjs` 管理；修改服务器代码后上传并重启现有的 `card` 服务。界面改动还需同步上传 `public/`。可用 `curl http://127.0.0.1:8080/api/health` 检查服务。房间仅保存在内存中，服务重启会清空对局。
+Linux 服务端需要 Node.js 18+，文件为 `server.mjs`、`room-store.mjs`、`engine.mjs`、`release-integrity.mjs`、根目录 `release.json` 和整个 `public/`。规则由 `engine.mjs` 结算，房间与凭据由 `room-store.mjs` 管理；修改后必须完整发布并重启现有的 `card` 服务。可用 `curl http://127.0.0.1:8080/api/health` 检查服务，正常返回 `integrity: "verified"`、版本及发布摘要。房间仅保存在内存中，服务重启会清空对局。
 
-本次伤害来源与企鹅挡伤提示需要更新服务端。现有服务器可使用 `fish-server-update.zip`，将其中的三个 `.mjs` 文件与 `public/` 覆盖到游戏目录，再重启 `card`。具体步骤见 [服务端更新说明.md](服务端更新说明.md)。Linux 服务端不需要 Windows 的 `.msi` 安装包。
+本次版本校验需要完整更新服务端。现有服务器可使用 `fish-server-update.zip`，覆盖四个 `.mjs` 文件、根目录 `release.json` 和整个 `public/`，再重启 `card`。双方客户端也需要更新。具体步骤见 [服务端更新说明.md](服务端更新说明.md)。Linux 服务端不需要 Windows 的 `.msi` 安装包。
+
+### 开发修改后的发布步骤
+
+修改运行文件后，旧发布清单会阻止启动，这是预期行为。正式发布时先更新 `public/integrity.mjs` 中的 `CLIENT_VERSION`，然后在项目目录执行：
+
+```powershell
+node scripts/build-release.mjs
+node --test tests/*.test.mjs
+node scripts/build-release.mjs --check
+```
+
+本机反复调试可暂时保持版本号，修改后重新生成清单、重启服务并刷新页面；发布摘要仍会因内容改变而变化。不要在服务端启动脚本或部署服务器上自动重建清单，否则会把修改过的文件当作新基线。正式更新需从维护用项目生成并同步发布清单和全部运行文件，上传时保留文件原始内容及换行。
 
 当前公网 IP 的 HTTPS、8443 端口和证书续期步骤见 [HTTPS部署指南.md](HTTPS部署指南.md)。
 

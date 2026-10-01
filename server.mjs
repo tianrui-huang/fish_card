@@ -1,14 +1,14 @@
 import http from 'node:http';
-import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import os from 'node:os';
 import { act, view } from './engine.mjs';
 import { RoomStore } from './room-store.mjs';
+import { loadRelease, ReleaseGate } from './release-integrity.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 8080);
-const mime = { '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.svg':'image/svg+xml' };
+const mime = { '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.mjs':'text/javascript; charset=utf-8', '.json':'application/json; charset=utf-8' };
 const send = (res, status, data) => { res.writeHead(status, {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}); res.end(JSON.stringify(data)); };
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin','*');
@@ -22,6 +22,8 @@ const readBody = async req => {
   return JSON.parse(text || '{}');
 };
 export function createServer() {
+  // Validate the shipped baseline once; serve those verified bytes for this process's lifetime.
+  const release = loadRelease(root), gate = new ReleaseGate(release.client);
   const streams = new Map();
   const store = new RoomStore({ onClose(g, reason) {
     for (let i = 0; i < g.players.length; i++) {
@@ -33,7 +35,19 @@ export function createServer() {
       }
     }
   } });
-  const session = token => store.session(token);
+  const session = token => {
+    const result = store.session(token);
+    if (store.tokens.get(token).releaseId !== release.client.releaseId || result.g.releaseId !== release.client.releaseId)
+      throw Object.assign(Error('房间发布版本不一致，请重新创建房间。'), { status:409, code:'CLIENT_INCOMPATIBLE' });
+    return result;
+  };
+  function bind(result, verification) {
+    gate.consume(verification);
+    const s = store.tokens.get(result.token);
+    s.releaseId = release.client.releaseId;
+    store.rooms.get(s.code).releaseId = release.client.releaseId;
+    return { ...result, version:release.client.version, releaseId:release.client.releaseId };
+  }
   function broadcast(g) {
     for (let i=0; i<2; i++) for (const res of streams.get(`${g.code}:${i}`) || []) res.write(`data: ${JSON.stringify(view(g,i))}\n\n`);
   }
@@ -51,15 +65,24 @@ export function createServer() {
       cors(res);
       const u = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
       if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
-      if (u.pathname === '/api/health' && req.method === 'GET') { send(res,200,{ok:true,service:'tide-card-game'}); return; }
+      if (u.pathname === '/api/health' && req.method === 'GET') { send(res,200,{ok:true,service:'tide-card-game',version:release.client.version,releaseId:release.client.releaseId,integrity:'verified'}); return; }
+      if (u.pathname === '/api/verify' && req.method === 'POST') {
+        const b = await readBody(req); send(res,200,gate.verify(b.proof)); return;
+      }
       if (req.method === 'POST' && u.pathname === '/api/create') {
-        const b = await readBody(req); send(res,200,store.create(b.name)); return;
+        const b = await readBody(req); gate.require(b.verification);
+        send(res,200,bind(store.create(b.name),b.verification)); return;
       }
       if (req.method === 'POST' && u.pathname === '/api/join') {
-        const b = await readBody(req); const result = store.join(b.code,b.name); send(res,200,result); broadcast(session(result.token).g); return;
+        const b = await readBody(req); gate.require(b.verification);
+        const result = bind(store.join(b.code,b.name),b.verification); send(res,200,result); broadcast(session(result.token).g); return;
+      }
+      if (req.method === 'POST' && u.pathname === '/api/resume') {
+        const b = await readBody(req); gate.require(b.verification); const {g}=session(b.token);
+        gate.consume(b.verification); send(res,200,{ok:true,code:g.code,version:release.client.version,releaseId:release.client.releaseId}); return;
       }
       if (req.method === 'POST' && u.pathname === '/api/leave') {
-        const b = await readBody(req); send(res,200,store.leave(b.token,b.mode)); return;
+        const b = await readBody(req); session(b.token); send(res,200,store.leave(b.token,b.mode)); return;
       }
       if (u.pathname === '/api/state' && req.method === 'GET') { const {g,i}=session(u.searchParams.get('token')); send(res,200,view(g,i)); return; }
       if (u.pathname === '/api/events' && req.method === 'GET') {
@@ -71,9 +94,9 @@ export function createServer() {
       }
       if (req.method !== 'GET') { send(res,405,{error:'方法不支持。'}); return; }
       let rel = decodeURIComponent(u.pathname === '/' ? '/index.html' : u.pathname);
-      if (!['/index.html','/app.css','/app.js'].includes(rel)) { send(res,404,{error:'找不到页面。'}); return; }
-      const file = path.join(root,'public',rel.slice(1)); const data = await readFile(file);
-      res.writeHead(200,{'Content-Type':mime[path.extname(file)] || 'application/octet-stream','Cache-Control':'no-cache'}); res.end(data);
+      const data = release.assets.get(rel);
+      if (!data) { send(res,404,{error:'找不到页面。'}); return; }
+      res.writeHead(200,{'Content-Type':mime[path.extname(rel)] || 'application/octet-stream','Cache-Control':'no-store'}); res.end(data);
     } catch (e) { send(res,e.status || 400,{error:e.message || '请求失败。', ...(e.code ? {code:e.code} : {})}); }
   });
   return server;

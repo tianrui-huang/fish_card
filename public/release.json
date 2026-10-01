@@ -1,0 +1,12 @@
+{
+  "protocol": 1,
+  "version": "2026.10.01.1",
+  "releaseId": "917c577dc48414d3fc0d892f81677b29af51dec144b534a2a6b708e91eafda29",
+  "rulesHash": "7f8474f14102d6ef4cfb533291096cae4c4a059f5fe01529c4aa41d883648ab2",
+  "files": {
+    "/index.html": "349b66fed3662d53ede932586219869c6eec1f30244fbf780f9cb2f99f25c038",
+    "/app.js": "6dad50ba69b36c76619e77e1c2c4b898772a798bdd5ef89e06951c16429a7f47",
+    "/app.css": "7318df60b62177bfa4abbf961266c8ecd68051fc788822e57b0cbb2a765c5c57",
+    "/integrity.mjs": "1083f6c8aa9d50aec9caa1e59ace24e0869117ecc9d792bb63c78e54a3f38f62"
+  }
+}

@@ -1,3 +1,5 @@
+import { inspectClient, serverLabel, OFFICIAL_SERVER, CLIENT_VERSION } from './integrity.mjs';
+
 const app = document.querySelector('#app');
 const roomChip = document.querySelector('#room-chip');
 const connection = document.querySelector('#connection');
@@ -39,11 +41,15 @@ function cardHTML(c, {hand=false, selected=false}={}) {
   return `<div class="card ${selected?'selected':''} ${c.sleep?'sleeping':''} ${c.airborne?'airborne':''} ${c.suppressedBy?'suppressed':''} ${fx.join(' ')}" data-card="${esc(c.id)}" data-owner="${hand?'hand':'field'}" title="${esc(d.text)}"><div class="card-inner"><div class="card-head"><strong>${esc(d.name)}</strong><span class="card-kind">${d.kind==='once'?'一次性':d.kind==='dual'?'两用':'角色'}</span></div><div class="card-art">${art(c.type)}</div><div class="card-info"><div class="card-text">${esc(d.text)}</div><div class="card-foot">${hp}<span>${esc(d.suit||'海域')}</span></div></div></div>${pop}${effects.sleep.has(c.id)?'<span class="sleep-burst">Zzz</span>':''}<div class="state-badges">${c.sleep?'<span class="badge-sleep">☾ 睡眠</span>':''}${c.airborne?`<span class="badge-air">↑ 腾空 · 势能 ${c.gravity}/3</span>`:''}${c.suppressedBy?'<span class="badge-suppress">⛓ 压制</span>':''}${state?.covering?.some(x=>x.c.id===c.id)?`<span class="badge-cover">▼ ${state.covering.find(x=>x.c.id===c.id).p===state.you?'己方':'对方'} · 压制中</span>`:''}</div></div>`;
 }
 async function post(url, body, base = activeRoom?.server || apiRoot()) {
-  const r=await fetch(`${base}${url}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); const data=await r.json();
+  let r;
+  try{r=await fetch(`${base}${url}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});}
+  catch(e){throw Error(e.name==='TimeoutError'?'服务端响应超时，请稍后重试。':'无法连接服务端，请确认网络和服务端已启动。');}
+  const data=await r.json();
   if(!r.ok) throw Object.assign(Error(data.error||'请求失败'),{code:data.code,status:r.status}); return data;
 }
 function notify(message) { toast.textContent=message; toast.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>toast.classList.remove('show'),2700); }
 function apiRoot(){
+  if(serverMode==='official')return OFFICIAL_SERVER;
   if(serverMode==='current')return window.location.origin;
   const raw=customServerUrl.trim();
   if(!raw)throw Error('请填写服务端地址。');
@@ -51,6 +57,16 @@ function apiRoot(){
   if(!['http:','https:'].includes(url.protocol))throw Error('服务端地址需要使用 HTTP 或 HTTPS。');
   if(url.pathname!=='/'||url.search||url.hash)throw Error('服务端网址请填写域名或 IP 根地址，不要附加路径。');
   return url.origin.replace(/\/$/,'');
+}
+async function verifyClient(base){
+  connection.textContent='正在校验客户端';
+  const proof=await inspectClient(window.location.origin);
+  let r;
+  try{r=await post('/api/verify',{proof},base);}catch(e){
+    if(!e.code&&e.status===404)throw Error('这台服务端尚未支持版本校验，请房主更新服务端。');
+    throw e;
+  }
+  return r.verification;
 }
 function saveServerSettings(){
   serverMode=document.querySelector('#server-mode')?.value||serverMode;
@@ -107,7 +123,7 @@ function closedRoom(data, t){
   if(data.state?.phase==='ended'){state={...data.state,roomClosed:true};connection.textContent='房间已关闭';render();}
   else{leaveGame();notify('房间已关闭。');}
 }
-async function connect(t, base = activeRoom?.server || apiRoot()) {
+async function connect(t, base = activeRoom?.server || apiRoot(), freshlyVerified = false) {
   stopEvents();const epoch=connectionEpoch;
   token=t;state=null;intent=null;chosenHand=null;
   activeRoom={...(activeRoom?.token===t?activeRoom:keptRooms.find(r=>r.token===t)),token:t,server:base};
@@ -115,6 +131,11 @@ async function connect(t, base = activeRoom?.server || apiRoot()) {
   roomMenuButton.hidden=true;roomChip.textContent='';connection.textContent='正在连接';
   app.innerHTML='<section class="center-state"><h2>正在进入房间…</h2></section>';
   try {
+    if(!freshlyVerified){
+      const verification=await verifyClient(base);
+      if(epoch!==connectionEpoch)return;
+      await post('/api/resume',{token:t,verification},base);
+    }
     const r=await fetch(base+'/api/state?token='+encodeURIComponent(t)), data=await r.json();
     if(epoch!==connectionEpoch)return;
     if(!r.ok)throw Object.assign(Error(data.error||'无法进入房间。'),{code:data.code});
@@ -141,13 +162,13 @@ async function connect(t, base = activeRoom?.server || apiRoot()) {
 function keptRoomsHTML(){
   if(!keptRooms.length)return '';
   return '<section class="kept-rooms"><h3>暂存的房间</h3><p class="server-hint">本标签页中可继续；保留期间对手仍可加入或行动。</p>'+keptRooms.map((r,i)=>
-    '<article class="kept-room"><div><strong>房间 '+esc(r.code||'待恢复')+'</strong><small>'+esc(r.server)+'</small></div><div class="kept-room-actions"><button class="secondary small" data-resume="'+i+'">继续房间</button><button class="ghost small" data-drop-room="'+i+'">放弃房间</button></div></article>'
+    '<article class="kept-room"><div><strong>房间 '+esc(r.code||'待恢复')+'</strong><small>'+esc(serverLabel(r.server,window.location.origin))+'</small></div><div class="kept-room-actions"><button class="secondary small" data-resume="'+i+'">继续房间</button><button class="ghost small" data-drop-room="'+i+'">放弃房间</button></div></article>'
   ).join('')+'</section>';
 }
 function lobby() {
   roomChip.textContent='';connection.textContent='大厅';roomMenuButton.hidden=true;
   const custom=serverMode==='custom';
-  app.innerHTML=`<section class="lobby"><div class="hero"><div class="hero-eyebrow">TWO PLAYER CARD BATTLE</div><h1>海底见，<br><span>手底见真章。</span></h1><p>把熟悉的海洋生物卡牌搬上桌。排兵布阵、交换生命、抓住对手的空档——潮汐正在改变。</p><div class="hero-art"><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span><div class="float-card">${art('penguin')}</div><div class="float-card">${art('shark')}</div></div></div><div class="lobby-panel"><h2>开始对局</h2><p>两位玩家选择同一台游戏服务端，再通过房间号会合。</p><label class="field-label" for="server-mode">连接到</label><select id="server-mode" class="text-input"><option value="current" ${!custom?'selected':''}>当前页面的服务端</option><option value="custom" ${custom?'selected':''}>自定义公网服务端</option></select><div id="server-address-wrap" ${custom?'':'hidden'}><label class="field-label" for="server-url">服务端网址</label><input id="server-url" class="text-input" type="url" placeholder="https://game.example.com" value="${esc(customServerUrl)}"><p class="server-hint">填写完整网址，公网地址建议使用 HTTPS。</p></div><label class="field-label" for="name">你的名字</label><input id="name" class="text-input" maxlength="16" placeholder="输入昵称" value="玩家"><button id="create" class="primary full" style="margin-top:15px">创建新房间</button><div class="divider">或者加入朋友的房间</div><div class="join-row"><input id="code" class="text-input" maxlength="6" placeholder="六位房间号"><button id="join" class="secondary">加入房间</button></div><p class="lobby-note">十一种卡共42张，双方从同一牌堆各随机抽六张。</p>${keptRoomsHTML()}</div></section>`;
+  app.innerHTML=`<section class="lobby"><div class="hero"><div class="hero-eyebrow">TWO PLAYER CARD BATTLE</div><h1>海底见，<br><span>手底见真章。</span></h1><p>把熟悉的海洋生物卡牌搬上桌。排兵布阵、交换生命、抓住对手的空档——潮汐正在改变。</p><div class="hero-art"><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span><div class="float-card">${art('penguin')}</div><div class="float-card">${art('shark')}</div></div></div><div class="lobby-panel"><h2>开始对局</h2><p>两位玩家选择同一台游戏服务端，再通过房间号会合。</p><label class="field-label" for="server-mode">连接到</label><select id="server-mode" class="text-input"><option value="current" ${serverMode==='current'?'selected':''}>当前页面的服务端</option><option value="custom" ${custom?'selected':''}>自定义服务端</option><option value="official" ${serverMode==='official'?'selected':''}>官方服务器</option></select><div id="server-address-wrap" ${custom?'':'hidden'}><label class="field-label" for="server-url">服务端网址</label><input id="server-url" class="text-input" type="url" placeholder="https://game.example.com" value="${esc(customServerUrl)}"><p class="server-hint">填写完整网址，公网地址建议使用 HTTPS。</p></div><label class="field-label" for="name">你的名字</label><input id="name" class="text-input" maxlength="16" placeholder="输入昵称" value="玩家"><button id="create" class="primary full" style="margin-top:15px">创建新房间</button><div class="divider">或者加入朋友的房间</div><div class="join-row"><input id="code" class="text-input" maxlength="6" placeholder="六位房间号"><button id="join" class="secondary">加入房间</button></div><p class="lobby-note">十一种卡共42张，双方从同一牌堆各随机抽六张。</p><p class="server-hint">版本 ${esc(CLIENT_VERSION)} · 入房前自动检查文件与双方版本</p>${keptRoomsHTML()}</div></section>`;
 }
 const me=()=>state.players[state.you], foe=()=>state.players[1-state.you];
 function isMyTurn(){return state.phase==='battle'&&state.turn===state.you&&!state.pending;}
@@ -169,8 +190,10 @@ function previewHandHTML(){
 }
 function waitingScreen(){
   let address='';try{address=activeRoom?.server||apiRoot();}catch{}
-  app.innerHTML=`<section class="center-state pregame-state"><div class="hero-eyebrow">ROOM ${esc(state.code)}</div><h2>房间已创建</h2><p>把下面的服务端地址和房间号发给朋友，对方选择同一服务端后即可加入。</p><p class="server-address">服务端：<strong>${esc(address)}</strong></p><button id="copy" class="primary">复制联机信息</button>${previewHandHTML()}</section>`;
-  document.querySelector('#copy').onclick=()=>navigator.clipboard?.writeText(`服务端：${address}\n房间号：${state.code}`).then(()=>notify('服务端地址和房间号已复制')).catch(()=>notify(`服务端：${address}　房间号：${state.code}`));
+  const label=address===OFFICIAL_SERVER?'官方服务器':address;
+  const info=`服务端：${label}\n房间号：${state.code}`;
+  app.innerHTML=`<section class="center-state pregame-state"><div class="hero-eyebrow">ROOM ${esc(state.code)}</div><h2>房间已创建</h2><p>${address===OFFICIAL_SERVER?'朋友选择“官方服务器”，输入下面的房间号即可加入。':'把下面的服务端地址和房间号发给朋友，对方选择同一服务端后即可加入。'}</p><p class="server-address">服务端：<strong>${esc(label)}</strong></p><p class="server-hint">版本 ${esc(CLIENT_VERSION)} · 文件校验已通过</p><button id="copy" class="primary">复制联机信息</button>${previewHandHTML()}</section>`;
+  document.querySelector('#copy').onclick=async()=>{try{if(!navigator.clipboard)throw Error();await navigator.clipboard.writeText(info);notify('联机信息已复制');}catch{notify(info.replace('\n','　'));}};
   wire();
 }
 function locate(id,seen=new Set()){
@@ -409,9 +432,11 @@ app.addEventListener('click',async e=>{
   if((!create&&!join)||lobbyBusy)return;
   lobbyBusy=true;app.querySelectorAll('#create,#join').forEach(b=>b.disabled=true);
   try{saveServerSettings();const base=apiRoot();
-    const r=await post(create?'/api/create':'/api/join',{name:document.querySelector('#name').value,...(join?{code:document.querySelector('#code').value}:{})},base);
-    await connect(r.token,base);
-  }catch(err){notify(err.message);}finally{lobbyBusy=false;app.querySelectorAll('#create,#join').forEach(b=>b.disabled=false);}
+    const name=document.querySelector('#name').value,code=document.querySelector('#code').value;
+    const verification=await verifyClient(base);
+    const r=await post(create?'/api/create':'/api/join',{name,verification,...(join?{code}:{})},base);
+    await connect(r.token,base,true);
+  }catch(err){notify(err.message);}finally{lobbyBusy=false;if(!state)connection.textContent='大厅';app.querySelectorAll('#create,#join').forEach(b=>b.disabled=false);}
 });
 app.addEventListener('change',e=>{
   if(e.target.id==='server-mode'){serverMode=e.target.value;localStorage.setItem(serverModeKey,serverMode);render();}
