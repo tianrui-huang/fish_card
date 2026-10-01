@@ -17,7 +17,7 @@ let serverMode = localStorage.getItem(serverModeKey) || 'current';
 let customServerUrl = localStorage.getItem(serverUrlKey) || '';
 let effects = { hit:new Map(), heal:new Set(), attack:new Set(), sleep:new Set(), dead:new Map(), targeting:new Set() };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const cardData = type => state?.cards?.[type] || ({kangaroo:{name:'袋鼠',kind:'unit',hp:2,text:'腾空积累势能；落击或受伤反击。'},elephant:{name:'大象',kind:'unit',hp:2,text:'压制敌方牌；受击免费返回，主动返回耗1点。'},whale:{name:'鲸',kind:'unit',hp:2,text:'操控敌方牌执行一次耗点行动，共耗1点。'},sloth:{name:'树懒',kind:'dual',hp:2,text:'使一张敌方牌睡眠；一次性可使一排睡眠。'},starfish:{name:'海星',kind:'once',text:'从双方弃牌堆复活一张牌。'},seahorse:{name:'海马',kind:'once',text:'夺取敌方牌，或盲抽一张手牌。'},urchin:{name:'海胆',kind:'unit',hp:2,text:'受伤时反弹1点伤害。'},sunfish:{name:'翻车鱼',kind:'unit',hp:3,text:'消耗1生命为友方牌恢复1生命，可因此退场。'},shark:{name:'鲨鱼',kind:'unit',hp:2,text:'攻击一排；击杀后追击。'},crab:{name:'螃蟹',kind:'unit',hp:2,text:'消耗1生命获得1行动点，可因此退场。'},penguin:{name:'企鹅',kind:'unit',hp:3,text:'对方回合替友方牌挡伤。'}})[type];
+const cardData = type => state?.cards?.[type] || ({kangaroo:{name:'袋鼠',kind:'unit',hp:2,text:'腾空积累势能；落击或受伤反击。'},elephant:{name:'大象',kind:'unit',hp:2,text:'压制敌方牌；受击免费返回，主动返回耗1点。'},whale:{name:'鲸',kind:'unit',hp:2,text:'操控敌方牌执行一次耗点行动，共耗1点。'},sloth:{name:'树懒',kind:'dual',hp:2,text:'使一张敌方牌睡眠；一次性可使一排睡眠。'},starfish:{name:'海星',kind:'once',text:'从双方弃牌堆复活一张牌。'},seahorse:{name:'海马',kind:'once',text:'夺取敌方牌，或盲抽一张手牌。'},urchin:{name:'海胆',kind:'unit',hp:2,text:'受伤时反弹1点伤害。'},sunfish:{name:'翻车鱼',kind:'unit',hp:3,text:'每张牌每回合限一次，消耗1生命为友方牌恢复1生命，可因此退场。'},shark:{name:'鲨鱼',kind:'unit',hp:2,text:'攻击一排；击杀后追击。'},crab:{name:'螃蟹',kind:'unit',hp:2,text:'消耗1生命获得1行动点，可因此退场。'},penguin:{name:'企鹅',kind:'unit',hp:3,text:'对方回合替友方牌挡伤。'}})[type];
 const art = type => {
   const shapes = {
     kangaroo:'<path d="M82 40L77 15q10-8 14 24m18 2l8-26q12 0 2 31" fill="#cc9567" stroke="#956343" stroke-width="4"/><ellipse cx="100" cy="54" rx="24" ry="22" fill="#dcaa7a"/><ellipse cx="104" cy="78" rx="28" ry="25" fill="#b88155"/><ellipse cx="103" cy="82" rx="17" ry="14" fill="#eed2a2"/><path d="M78 73Q40 75 45 99L81 89m39-3l25 14m-53-5l-11 7" fill="none" stroke="#ad744f" stroke-width="9" stroke-linecap="round"/><circle cx="94" cy="48" r="3" fill="#233d48"/><circle cx="111" cy="48" r="3" fill="#233d48"/><path d="M100 55l5 4 5-4" fill="#835747"/>',
@@ -102,7 +102,13 @@ function applyState(next){
     if(effects.hit.size||effects.heal.size||effects.sleep.size||effects.dead.size||effects.attack.size||effects.targeting.size){clearTimeout(fxTimer);fxTimer=setTimeout(()=>{effects={hit:new Map(),heal:new Set(),attack:new Set(),sleep:new Set(),dead:new Map(),targeting:new Set()};render();},950);}
     if(next.turn!==prev.turn||next.phase!==prev.phase){intent=null;chosenHand=null;}
   }
-  state=next;if(next.phase==='ended'&&roomMenu.open)roomMenu.close();render();
+  state=next;
+  if(intent?.kind==='sunfish'){
+    const healer=locate(intent.actorId);
+    if(!healer)intent=null;
+    else if(healer.c.sunfishSkillRound===state.round)intent={...intent,kind:'actor'};
+  }
+  if(next.phase==='ended'&&roomMenu.open)roomMenu.close();render();
 }
 
 function saveKeptRooms(){sessionStorage.setItem(keptKey,JSON.stringify(keptRooms));}
@@ -216,7 +222,7 @@ function legalTarget(id,kind=intent?.kind){
   if(kind==='seahorse')return t.p!==state.you;
   if(!a)return false;
   if(['attack','kangaroo'].includes(kind))return t.c.id!==a.c.id&&!t.c.sleep&&!(t.kind==='cover'&&t.p===state.you)&&(intent?.control?.length||t.p!==a.p)&&reachable(a,t);
-  if(kind==='sunfish')return t.p===a.p&&t.c.id!==a.c.id&&t.c.hp<cardData(t.c.type).hp;
+  if(kind==='sunfish')return a.c.sunfishSkillRound!==state.round&&t.p===a.p&&t.c.id!==a.c.id&&t.c.hp<cardData(t.c.type).hp;
   if(kind==='sloth')return t.p!==a.p&&!t.c.suppressedBy;
   if(kind==='elephant')return t.p!==a.p;
   if(kind==='whale')return t.p!==a.p&&!t.c.sleep&&!t.c.suppressedBy&&!(intent?.control||[]).some(x=>x.actorId===t.c.id);
@@ -285,12 +291,13 @@ function actionPanel(){
     if(selected.sleep)b+='<p>☾ 睡眠中，不能行动或被攻击。</p>';
     if(selected.suppressedBy)b+='<p>⛓ 被压制，不能操作。</p>';
     if(selected.airborne)b+=`<p>↑ 腾空 · 重力势能 ${selected.gravity}/3 · 落击/反击伤害 ${1+selected.gravity}</p>`;
+    if(selected.type==='sunfish'&&selected.sunfishSkillRound===state.round)b+='<p>本回合已发动治疗，下次回合可再次使用。</p>';
     if(intent.kind==='inspect')return b;
     if(controlled)b+='<p class="control-note">鲸正在操控这张牌，可选择耗点行为。普通攻击、袋鼠落击和鲨鱼群攻可选择鲸方的敌牌或己方其他牌，仍按原位置计算射程。</p>';
     b+='<button class="option" data-choice="attack">普通攻击 · 消耗1点</button>';
     if(selected.type==='sloth')b+='<button class="option" data-choice="sloth">使敌方牌睡眠 · 1点</button>';
     if(selected.type==='shark')b+='<button class="option" data-choice="shark">攻击敌方一排 · 1点</button>';
-    if(selected.type==='sunfish'&&!controlled)b+='<button class="option" data-choice="sunfish">治疗友方 · 免费</button>';
+    if(selected.type==='sunfish'&&!controlled)b+=`<button class="option" data-choice="sunfish" ${selected.sunfishSkillRound===state.round?'disabled':''}>${selected.sunfishSkillRound===state.round?'本回合已治疗':'治疗友方 · 免费 · 每回合1次'}</button>`;
     if(selected.type==='crab'&&!controlled)b+='<button class="option" data-choice="crab">换取行动点 · 免费</button>';
     if(selected.type==='kangaroo')b+=`<button class="option" data-choice="kangaroo">${selected.airborne?'落击 · '+(1+selected.gravity)+'伤害':'进入腾空 · 立即获得1势能'} · 1点</button>`;
     if(selected.type==='elephant')b+=`<button class="option" data-choice="elephant">${locate(selected.id).kind==='cover'?'主动解除压制并返回':'压制敌方牌'} · 1点</button>`;

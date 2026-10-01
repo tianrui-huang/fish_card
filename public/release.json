@@ -1,12 +1,12 @@
 {
   "protocol": 1,
-  "version": "2026.10.01.1",
-  "releaseId": "917c577dc48414d3fc0d892f81677b29af51dec144b534a2a6b708e91eafda29",
-  "rulesHash": "7f8474f14102d6ef4cfb533291096cae4c4a059f5fe01529c4aa41d883648ab2",
+  "version": "2026.10.01.2",
+  "releaseId": "4af15bf4a1ccc786dfa3d81b3aa5d149ada5d892c8f992374509cfabfaedf249",
+  "rulesHash": "ef1fd44a8d01314c67a960e846576a01648200c9ed0313620e6b707853b480ec",
   "files": {
-    "/index.html": "349b66fed3662d53ede932586219869c6eec1f30244fbf780f9cb2f99f25c038",
-    "/app.js": "6dad50ba69b36c76619e77e1c2c4b898772a798bdd5ef89e06951c16429a7f47",
+    "/index.html": "e68e35ae2097dba4a1ee67371e3de8b8efa43d399543f9a90bb83e46f29cb57f",
+    "/app.js": "9d33867232285f30a04a23f9ed89ffa3dc42e5d8e1b1f358fe1d9133ec55df16",
     "/app.css": "7318df60b62177bfa4abbf961266c8ecd68051fc788822e57b0cbb2a765c5c57",
-    "/integrity.mjs": "1083f6c8aa9d50aec9caa1e59ace24e0869117ecc9d792bb63c78e54a3f38f62"
+    "/integrity.mjs": "097a9c76da8bfb3ccfdb24f03139f08666bb96c07766b4228bc26e480d0070f3"
   }
 }

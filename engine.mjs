@@ -5,7 +5,7 @@ export const CARDS = {
   starfish: { name:'海星', kind:'once', text:'从双方弃牌堆复活一张非一次性卡到己方指定空位。' },
   seahorse: { name:'海马', kind:'once', text:'夺取敌方场上一张牌，或盲抽敌方一张手牌。' },
   urchin: { name:'海胆', kind:'unit', hp:2, suit:'紫', text:'攻击1。受到伤害时，向伤害来源返还1点伤害。' },
-  sunfish: { name:'翻车鱼', kind:'unit', hp:3, suit:'橙', text:'攻击1。消耗自身1生命，为其他友方牌恢复1生命；可以因此退场，不耗行动点。' },
+  sunfish: { name:'翻车鱼', kind:'unit', hp:3, suit:'橙', text:'攻击1。每张牌每回合限一次：消耗自身1生命，为其他友方牌恢复1生命；可以因此退场，不耗行动点。' },
   shark: { name:'鲨鱼', kind:'unit', hp:2, suit:'蓝', text:'攻击1。攻击敌方一排；若击杀，追击射程内生命最高的牌。' },
   crab: { name:'螃蟹', kind:'unit', hp:2, suit:'红', text:'攻击1。消耗自身1生命，本回合获得1行动点；可以因此退场，不耗行动点。' },
   penguin: { name:'企鹅', kind:'unit', hp:3, suit:'黑', text:'攻击1。对方回合中，可替另一张友方牌承受伤害；不耗行动点。' },
@@ -162,8 +162,9 @@ function applyMove(g,i,a,controlled=false,chain=[]){
     if(!targets.length)fail('这一排没有可攻击的目标。');spend(g,i);log(g,`${p.name}令鲨鱼冲击${g.players[targetPlayer].name}的${a.row===0?'前':'后'}排。`);hit(g,targets.map(t=>({source:src.c.id,sourceP:src.p,controllerP:i,kind:'sharkSkill',target:t.c.id,amount:1,sharkPrimary:true})),src.c.id,targetPlayer);return;
   }
   if(type==='sunfish'){
+    if(src.c.sunfishSkillRound===g.round)fail('这张翻车鱼本回合已经发动过技能。');
     const tgt=findField(g,a.targetId);if(!tgt||tgt.p!==src.p||tgt.c.id===src.c.id||tgt.c.hp>=CARDS[tgt.c.type].hp)fail('请选择受伤的其他友方牌。');
-    src.c.hp--;tgt.c.hp++;log(g,`${p.name}的翻车鱼为${CARDS[tgt.c.type].name}恢复1生命。`);removeDead(g,src);checkWin(g);return;
+    src.c.sunfishSkillRound=g.round;src.c.hp--;tgt.c.hp++;log(g,`${p.name}的翻车鱼为${CARDS[tgt.c.type].name}恢复1生命。`);removeDead(g,src);checkWin(g);return;
   }
   if(type==='crab'){src.c.hp--;g.ap++;log(g,`${p.name}的螃蟹换得1点额外行动点。`);removeDead(g,src);checkWin(g);return;}
   if(type==='kangaroo'){
