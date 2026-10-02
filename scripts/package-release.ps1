@@ -68,6 +68,8 @@ Write-Package 'fish-source' $source
 
 $server = Get-FileList @('src', 'public', 'docs') ($base + @('scripts/build-release.mjs', 'dist/fish-source.zip'))
 Write-Package 'fish-server-update' $server
+$serverVersion = (Get-Content -LiteralPath (Join-Path $taskRoot 'package.json') -Raw | ConvertFrom-Json).version
+Write-Package ("many-fish-server-v" + $serverVersion) $server
 
 $installerName = 'third_party/nodejs/node-v24.21.0-x64.msi'
 $installerHash = (Get-FileHash -LiteralPath (Join-Path $taskRoot $installerName) -Algorithm SHA256).Hash

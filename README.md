@@ -104,7 +104,7 @@ npm test
 npm run release:check
 ```
 
-在 PowerShell 中执行 `./scripts/package-release.ps1`，生成 `dist/` 下三个包。Windows 包含完整源码、测试、构建脚本和 Node 离线安装包；服务端包附带相同版本的源码 ZIP，网页底部提供许可证及源码下载。
+在 PowerShell 中执行 `./scripts/package-release.ps1`，在 `dist/` 下生成客户端、完整服务端和源码分发包。Windows 包含完整源码、测试、构建脚本和 Node 离线安装包；服务端包附带相同版本的源码 ZIP，网页底部提供许可证及源码下载。
 
 文件校验用于识别缺失、改动和版本混用；规则由服务端独立执行。浏览器摘要可以被伪造，无法证明玩家电脑未修改程序，也无法保证恶意局域网房主可信。修改版可以重新生成自己的发布清单并自建服务端；官方对局要求匹配官方发布。
 
