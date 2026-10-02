@@ -1,0 +1,115 @@
+<!-- Copyright (C) 2026 Many Fish contributors; SPDX-License-Identifier: GPL-3.0-only -->
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Many Fish · 开始试玩</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 32px 20px;
+        background: #102c3a;
+        color: #e4f1ef;
+        font-family: system-ui, 'Microsoft YaHei', sans-serif;
+      }
+      main {
+        width: min(650px, 100%);
+        padding: 38px;
+        border: 1px solid #4e9395;
+        border-radius: 24px;
+        background: linear-gradient(145deg, #1a4050, #102a39);
+      }
+      small {
+        color: #abd9d0;
+        letter-spacing: 3px;
+      }
+      h1 {
+        font-size: 44px;
+        margin: 12px 0 16px;
+      }
+      p,
+      li {
+        line-height: 1.8;
+      }
+      .play {
+        display: block;
+        text-align: center;
+        border-radius: 12px;
+        padding: 16px;
+        background: #a8d9bc;
+        color: #123b3b;
+        font-weight: 700;
+        text-decoration: none;
+        margin: 22px 0;
+      }
+      a {
+        color: #b0e7d4;
+      }
+      details {
+        border-top: 1px solid #496875;
+        padding-top: 20px;
+        margin-top: 24px;
+      }
+      summary {
+        cursor: pointer;
+      }
+      code {
+        background: #081e2a;
+        border-radius: 6px;
+        padding: 3px 7px;
+        overflow-wrap: anywhere;
+      }
+      footer {
+        font-size: 12px;
+        color: #b2cece;
+        margin-top: 26px;
+        line-height: 1.8;
+      }
+      @media (max-width: 450px) {
+        main {
+          padding: 25px;
+        }
+        h1 {
+          font-size: 36px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <small>CARD BATTLE · DEMO</small>
+      <h1>Many Fish</h1>
+      <p>
+        在浏览器中开始对局。无需运行本地启动脚本，也无需安装 Node；进入大厅后创建、加入或围观房间。
+      </p>
+      <a class="play" href="https://67.216.204.198:8443/" target="_blank" rel="noopener"
+        >进入官方服务器</a
+      >
+      <p>朋友使用自建服务器时，打开朋友提供的完整网址。所有玩家和观众需要连接同一服务端。</p>
+      <details>
+        <summary>局域网房主与本地测试</summary>
+        <p>
+          使用完整 Windows 包并安装 Node.js 18+。如果 Windows 拦截了
+          <code>启动游戏.cmd</code>，可打开终端进入解压目录，直接运行：
+        </p>
+        <p><code>node server.mjs</code></p>
+        <p>
+          再访问终端显示的网址；其他设备使用房主的局域网地址。Node 安装包随完整包提供，也可从
+          <a href="https://nodejs.org/en/download">Node.js 官网</a>安装。
+        </p>
+      </details>
+      <footer>
+        © 2026 Many Fish 贡献者 · 无担保 · <a href="LICENSE">GPLv3</a><br />
+        <a href="dist/fish-source.zip">随包源码</a> ·
+        <a href="https://github.com/tianrui-huang/fish_card">项目仓库</a>
+      </footer>
+    </main>
+  </body>
+</html>

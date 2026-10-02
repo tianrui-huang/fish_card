@@ -21,7 +21,12 @@ export const FALLBACK_CARDS = {
     text: '每张牌每回合限一次，消耗1生命为友方牌恢复1生命，可因此退场。',
   },
   shark: { name: '鲨鱼', kind: 'unit', hp: 2, text: '攻击一排；击杀后追击。' },
-  crab: { name: '螃蟹', kind: 'unit', hp: 2, text: '消耗1生命获得1行动点，可因此退场。' },
+  crab: {
+    name: '螃蟹',
+    kind: 'unit',
+    hp: 2,
+    text: '每张牌每回合限一次，消耗1生命获得1行动点，可因此退场。',
+  },
   penguin: { name: '企鹅', kind: 'unit', hp: 3, text: '对方回合替友方牌挡伤。' },
 };
 

@@ -4,7 +4,7 @@
 import http from 'node:http';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { act, view } from '../game/engine.mjs';
+import { act } from '../game/engine.mjs';
 import { RoomStore } from './rooms.mjs';
 import { loadRelease, ReleaseGate } from './release.mjs';
 
@@ -45,8 +45,11 @@ export function createServer() {
   // Validate the shipped baseline once; serve those verified bytes for this process's lifetime.
   const release = loadRelease(root),
     gate = new ReleaseGate(release.client);
-  const { broadcast, addStream, closeRoom } = createRoomEvents();
-  const store = new RoomStore({ onClose: closeRoom });
+  let store;
+  const { broadcast, addStream, closeRoom, closeViewer } = createRoomEvents({
+    snapshot: (g, i) => store.snapshot(g, i),
+  });
+  store = new RoomStore({ onClose: closeRoom, onViewerLeave: closeViewer });
   const session = (token) => {
     const result = store.session(token);
     if (
@@ -104,6 +107,22 @@ export function createServer() {
         broadcast(session(result.token).g);
         return;
       }
+      if (req.method === 'POST' && u.pathname === '/api/watch') {
+        const b = await readBody(req);
+        gate.require(b.verification);
+        const result = bind(store.watch(b.code, b.name), b.verification);
+        send(res, 200, result);
+        broadcast(session(result.token).g);
+        return;
+      }
+      if (req.method === 'POST' && u.pathname === '/api/chat') {
+        const b = await readBody(req);
+        const { g } = session(b.token);
+        const message = store.chat(b.token, b.text);
+        broadcast(g);
+        send(res, 200, { ok: true, message });
+        return;
+      }
       if (req.method === 'POST' && u.pathname === '/api/resume') {
         const b = await readBody(req);
         gate.require(b.verification);
@@ -119,13 +138,15 @@ export function createServer() {
       }
       if (req.method === 'POST' && u.pathname === '/api/leave') {
         const b = await readBody(req);
-        session(b.token);
-        send(res, 200, store.leave(b.token, b.mode));
+        const { g } = session(b.token);
+        const result = store.leave(b.token, b.mode);
+        send(res, 200, result);
+        if (!result.closed) broadcast(g);
         return;
       }
       if (u.pathname === '/api/state' && req.method === 'GET') {
         const { g, i } = session(u.searchParams.get('token'));
-        send(res, 200, view(g, i));
+        send(res, 200, store.snapshot(g, i));
         return;
       }
       if (u.pathname === '/api/events' && req.method === 'GET') {
@@ -142,6 +163,8 @@ export function createServer() {
       if (u.pathname === '/api/action' && req.method === 'POST') {
         const b = await readBody(req);
         const { g, i } = session(b.token);
+        if (!Number.isInteger(i))
+          throw Object.assign(Error('观战者不能操作对局。'), { status: 403 });
         act(g, i, b.action);
         broadcast(g);
         send(res, 200, { ok: true });

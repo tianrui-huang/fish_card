@@ -61,10 +61,11 @@ function Write-Package($name, $files) {
 
 $base = @('server.mjs', 'release.json', 'LICENSE', 'README.md', 'package.json', 'package-lock.json')
 $source = Get-FileList @('src', 'public', 'scripts', 'tests', 'docs') ($base + @(
-    '启动游戏.cmd', '.gitignore', '.gitattributes', '.prettierrc.json', '.prettierignore',
+    '启动游戏.cmd', '开始试玩.html', '.gitignore', '.gitattributes', '.prettierrc.json', '.prettierignore',
     'third_party/nodejs/LICENSE'
 ))
 Write-Package 'fish-source' $source
+Write-Package 'fish-browser-client' @('开始试玩.html', 'LICENSE', 'README.md', 'dist/fish-source.zip')
 
 $server = Get-FileList @('src', 'public', 'docs') ($base + @('scripts/build-release.mjs', 'dist/fish-source.zip'))
 Write-Package 'fish-server-update' $server

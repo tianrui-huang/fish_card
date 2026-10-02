@@ -1,6 +1,6 @@
 {
   "name": "many-fish-demo",
-  "version": "0.1.0-demo.2",
+  "version": "0.1.0-demo.3",
   "private": true,
   "description": "Many Fish：双人浏览器卡牌游戏 Demo",
   "type": "module",

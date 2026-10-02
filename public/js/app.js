@@ -5,12 +5,17 @@ import { inspectClient, serverLabel } from './integrity.mjs';
 import { OFFICIAL_SERVER, CLIENT_VERSION } from './config.mjs';
 import { FALLBACK_CARDS, art } from './cards.mjs';
 import { requestJSON } from './network.mjs';
+import { createRoomChat } from './chat.mjs';
 
 // DOM, local room state and selected actions
 const app = document.querySelector('#app');
 const roomChip = document.querySelector('#room-chip');
 const connection = document.querySelector('#connection');
 const toast = document.querySelector('#toast');
+const roomChat = createRoomChat((text) => post('/api/chat', { token, text }));
+const turnCue = document.querySelector('#turn-cue');
+let turnCueTimer;
+const isSpectator = () => state?.role === 'spectator';
 const sessionKey = 'tide-card-session';
 const serverModeKey = 'tide-server-mode',
   serverUrlKey = 'tide-server-url';
@@ -248,6 +253,28 @@ function applyState(next) {
   }
   if (next.phase === 'ended' && roomMenu.open) roomMenu.close();
   render();
+  if (
+    next.role !== 'spectator' &&
+    next.phase === 'battle' &&
+    next.turn === next.you &&
+    !next.pending &&
+    (!prev || prev.code !== next.code || prev.phase !== 'battle' || prev.round !== next.round)
+  ) {
+    clearTimeout(turnCueTimer);
+    document.querySelector('#turn-cue-detail').textContent =
+      `第 ${next.round} 回合 · 行动点 ${next.ap}`;
+    turnCue.hidden = false;
+    const card = turnCue.firstElementChild;
+    card.style.animation = 'none';
+    void card.offsetWidth;
+    card.style.animation = '';
+    turnCueTimer = setTimeout(() => {
+      turnCue.hidden = true;
+    }, 1800);
+  } else if (next.phase !== 'battle' || next.turn !== next.you) {
+    clearTimeout(turnCueTimer);
+    turnCue.hidden = true;
+  }
 }
 
 // Room connections and resume lifecycle
@@ -266,7 +293,13 @@ function rememberRoom(room) {
 }
 function updateActiveRoom() {
   if (!activeRoom || !state) return;
-  activeRoom = { ...activeRoom, code: state.code, name: me().name, phase: state.phase };
+  activeRoom = {
+    ...activeRoom,
+    code: state.code,
+    name: state.viewerName || me()?.name,
+    phase: state.phase,
+    role: state.role,
+  };
   sessionStorage.setItem(activeKey, JSON.stringify(activeRoom));
 }
 function closedRoom(data, t) {
@@ -436,6 +469,8 @@ function lobby() {
           加入房间
         </button>
       </div>
+      <button id="watch" class="ghost full" style="margin-top:10px">围观这个房间</button>
+      <p class="server-hint">观众可以聊天、查看场上牌与战况，双方手牌保持隐藏。</p>
       <p class="lobby-note">十一种卡共42张，双方从同一牌堆各随机抽六张。</p>
       <p class="server-hint">版本 ${esc(CLIENT_VERSION)} · 入房前自动检查文件与双方版本</p>
       ${keptRoomsHTML()}
@@ -445,7 +480,7 @@ function lobby() {
 const me = () => state.players[state.you],
   foe = () => state.players[1 - state.you];
 function isMyTurn() {
-  return state.phase === 'battle' && state.turn === state.you && !state.pending;
+  return !isSpectator() && state.phase === 'battle' && state.turn === state.you && !state.pending;
 }
 function selectedCard(id) {
   return me().hand?.find((x) => x.id === id);
@@ -639,8 +674,7 @@ function legalTarget(id, kind = intent?.kind) {
     );
   return false;
 }
-function renderRows(owner, side) {
-  const locationP = side === 'mine' ? state.you : 1 - state.you;
+function renderRows(owner, side, locationP = side === 'mine' ? state.you : 1 - state.you) {
   return [0, 1]
     .map((r) => {
       const localRow = side === 'enemy' ? 1 - r : r;
@@ -747,7 +781,7 @@ function intentText() {
 function damageUnitLabel(unit) {
   if (!unit) return '未知卡牌';
   const name = state.players[unit.player]?.name || '玩家',
-    side = unit.player === state.you ? '你' : '对手';
+    side = isSpectator() ? `玩家${unit.player + 1}` : unit.player === state.you ? '你' : '对手';
   const half =
     unit.locationPlayer !== unit.player
       ? '位于' + state.players[unit.locationPlayer]?.name + '半场的'
@@ -905,6 +939,8 @@ function actionPanel() {
       b += `<p>↑ 腾空 · 重力势能 ${selected.gravity}/3 · 落击/反击伤害 ${1 + selected.gravity}</p>`;
     if (selected.type === 'sunfish' && selected.sunfishSkillRound === state.round)
       b += '<p>本回合已发动治疗，下次回合可再次使用。</p>';
+    if (selected.type === 'crab' && selected.crabSkillRound === state.round)
+      b += '<p>本回合已换取行动点，下次回合可再次使用。</p>';
     if (intent.kind === 'inspect') return b;
     if (controlled)
       b +=
@@ -917,7 +953,7 @@ function actionPanel() {
     if (selected.type === 'sunfish' && !controlled)
       b += `<button class="option" data-choice="sunfish" ${selected.sunfishSkillRound === state.round ? 'disabled' : ''}>${selected.sunfishSkillRound === state.round ? '本回合已治疗' : '治疗友方 · 免费 · 每回合1次'}</button>`;
     if (selected.type === 'crab' && !controlled)
-      b += '<button class="option" data-choice="crab">换取行动点 · 免费</button>';
+      b += `<button class="option" data-choice="crab" ${selected.crabSkillRound === state.round ? 'disabled' : ''}>${selected.crabSkillRound === state.round ? '本回合已换取行动点' : '换取行动点 · 免费 · 每回合1次'}</button>`;
     if (selected.type === 'kangaroo')
       b += `<button class="option" data-choice="kangaroo">${selected.airborne ? '落击 · ' + (1 + selected.gravity) + '伤害' : '进入腾空 · 立即获得1势能'} · 1点</button>`;
     if (selected.type === 'elephant')
@@ -970,7 +1006,7 @@ function battleScreen() {
     o = foe(),
     mineTurn = isMyTurn();
   const cardRows = (owner, side) => renderRows(owner, side);
-  app.innerHTML = /* HTML */ `<div class="game-layout">
+  app.innerHTML = /* HTML */ `<div class="game-layout ${mineTurn ? 'my-turn' : ''}">
     <section class="arena">
       <div class="player-strip">
         <div><strong>${esc(o.name)}</strong> <span>对手 · ${o.handCount} 张手牌</span></div>
@@ -1066,14 +1102,79 @@ function restoreHandScroll(position) {
   const hand = app.querySelector('.hand-cards');
   if (hand) hand.scrollLeft = position;
 }
+function spectatorScreen() {
+  const rows = (owner, side, p) =>
+    owner ? renderRows(owner, side, p) : '<p>等待第二位玩家加入。</p>';
+  const selected = locate(intent?.actorId)?.c;
+  const progress =
+    state.phase === 'battle'
+      ? `${state.players[state.turn]?.name}正在行动 · 第 ${state.round} 回合`
+      : state.phase === 'setup'
+        ? `${state.players[state.setup]?.name}正在布阵`
+        : state.phase === 'rps'
+          ? '玩家正在猜拳'
+          : state.phase === 'ended'
+            ? `${state.players[state.winner]?.name}获胜`
+            : '等待另一位玩家';
+  app.innerHTML = /* HTML */ `<div class="game-layout spectator-screen">
+    <section class="arena">
+      <h2>观战中</h2>
+      <p class="spectator-note">${esc(progress)} · 观众 ${state.spectatorCount || 0} 人</p>
+      <div class="battlefield">
+        <div class="zone-title">
+          ${esc(state.players[1]?.name || '等待玩家')} · ${state.players[1]?.handCount ?? 0} 张手牌
+        </div>
+        ${rows(state.players[1], 'enemy', 1)}
+        <div class="middle-line">潮 汐 分 界</div>
+        ${rows(state.players[0], 'mine', 0)}
+        <div class="zone-title">
+          ${esc(state.players[0].name)} · ${state.players[0].handCount} 张手牌
+        </div>
+      </div>
+      <p class="spectator-note">双方手牌不可见。点击场上卡牌查看说明；展开房间聊天即可发言。</p>
+      ${state.players
+        .map(
+          (p) =>
+            `<p class="spectator-note">${esc(p.name)}的弃牌：${p.discard.map((c) => esc(cardData(c.type).name)).join('、') || '暂无'}</p>`,
+        )
+        .join('')}
+      <button class="secondary" data-leave>${state.roomClosed ? '返回大厅' : '退出观战'}</button>
+    </section>
+    <aside class="side-panel">
+      <h2>${selected ? esc(cardData(selected.type).name) : '对局状态'}</h2>
+      <p class="spectator-note">${selected ? esc(cardData(selected.type).text) : esc(progress)}</p>
+      ${damageNoticesHTML()}
+      <h2 class="log-title">战况记录</h2>
+      <div class="log">
+        ${[...state.log]
+          .reverse()
+          .map((x) => `<div class="log-entry">${esc(x)}</div>`)
+          .join('')}
+      </div>
+    </aside>
+  </div>`;
+  wire();
+}
 function render() {
+  const chatFocus = roomChat.beforeRender(app);
+  renderBoard();
+  roomChat.mount(app, chatFocus);
+}
+function renderBoard() {
   const handScroll = app.querySelector('.hand-cards')?.scrollLeft ?? 0;
+  roomChat.setState(state, token);
+  document.title = isMyTurnSafe() ? '轮到你了 · Many Fish' : 'Many Fish · 海洋对决';
   roomMenuButton.hidden = !state || state.phase === 'ended';
   if (!state) {
     lobby();
     return;
   }
   roomChip.innerHTML = `房间 <strong>${esc(state.code)}</strong>`;
+  if (isSpectator()) {
+    roomChip.insertAdjacentText('beforeend', ' · 观战');
+    spectatorScreen();
+    return;
+  }
   if (state.phase === 'waiting') {
     waitingScreen();
     restoreHandScroll(handScroll);
@@ -1091,6 +1192,9 @@ function render() {
   }
   battleScreen();
   restoreHandScroll(handScroll);
+}
+function isMyTurnSafe() {
+  return !!state && isMyTurn();
 }
 // Card selection and action dispatch
 function chooseCard(id, owner) {
@@ -1158,6 +1262,7 @@ function handleSlot(el) {
     chooseCard(cardEl.dataset.card, 'field');
     return;
   }
+  if (isSpectator()) return;
   if (
     state.pending?.kind === 'return' &&
     state.pending.respondTo === state.you &&
@@ -1184,6 +1289,8 @@ function handleSlot(el) {
 function leaveGame() {
   stopEvents();
   clearTimeout(fxTimer);
+  clearTimeout(turnCueTimer);
+  turnCue.hidden = true;
   sessionStorage.removeItem(sessionKey);
   sessionStorage.removeItem(activeKey);
   activeRoom = null;
@@ -1211,6 +1318,11 @@ function openRoomMenu(room = activeRoom) {
     : '放弃后房间号会被释放；双方到齐后会判对手获胜。';
   document.querySelector('#keep-room').hidden = !current;
   document.querySelector('#abandon-room').textContent = current ? '放弃房间并返回' : '确认放弃房间';
+  if (room.role === 'spectator') {
+    document.querySelector('#room-menu-description').textContent =
+      '退出观战不会影响玩家对局。保留入口可稍后继续围观。';
+    document.querySelector('#abandon-room').textContent = '退出观战';
+  }
   document.querySelector('#cancel-room-menu').textContent = current ? '继续留在房间' : '取消';
   document.querySelector('#room-menu-error').textContent = '';
   roomMenu.showModal();
@@ -1238,7 +1350,13 @@ async function leaveRoom(mode, room = activeRoom) {
     if (roomMenu.open) roomMenu.close();
     if (current) leaveGame();
     else render();
-    notify(kept ? '房间已保留，可在大厅继续。' : '房间已关闭，房间号已释放。');
+    notify(
+      kept
+        ? '房间已保留，可在大厅继续。'
+        : room.role === 'spectator'
+          ? '已退出观战，对局继续。'
+          : '房间已关闭，房间号已释放。',
+    );
   } catch (e) {
     if (e.code === 'ROOM_CLOSED') {
       forgetRoom(room.token);
@@ -1369,7 +1487,9 @@ function wire() {
   app
     .querySelectorAll('[data-leave]')
     .forEach(
-      (b) => (b.onclick = () => (state.roomClosed ? leaveGame() : void leaveRoom('finish'))),
+      (b) =>
+        (b.onclick = () =>
+          state.roomClosed ? leaveGame() : void leaveRoom(isSpectator() ? 'abandon' : 'finish')),
     );
 }
 
@@ -1400,10 +1520,11 @@ app.addEventListener('click', async (e) => {
     return;
   }
   const create = e.target.closest('#create'),
-    join = e.target.closest('#join');
-  if ((!create && !join) || lobbyBusy) return;
+    join = e.target.closest('#join'),
+    watch = e.target.closest('#watch');
+  if ((!create && !join && !watch) || lobbyBusy) return;
   lobbyBusy = true;
-  app.querySelectorAll('#create,#join').forEach((b) => (b.disabled = true));
+  app.querySelectorAll('#create,#join,#watch').forEach((b) => (b.disabled = true));
   try {
     saveServerSettings();
     const base = apiRoot();
@@ -1411,8 +1532,8 @@ app.addEventListener('click', async (e) => {
       code = document.querySelector('#code').value;
     const verification = await verifyClient(base);
     const r = await post(
-      create ? '/api/create' : '/api/join',
-      { name, verification, ...(join ? { code } : {}) },
+      create ? '/api/create' : watch ? '/api/watch' : '/api/join',
+      { name, verification, ...(!create ? { code } : {}) },
       base,
     );
     await connect(r.token, base, true);
@@ -1421,7 +1542,7 @@ app.addEventListener('click', async (e) => {
   } finally {
     lobbyBusy = false;
     if (!state) connection.textContent = '大厅';
-    app.querySelectorAll('#create,#join').forEach((b) => (b.disabled = false));
+    app.querySelectorAll('#create,#join,#watch').forEach((b) => (b.disabled = false));
   }
 });
 app.addEventListener('change', (e) => {

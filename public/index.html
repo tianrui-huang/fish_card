@@ -22,6 +22,47 @@
         </div>
       </header>
       <main id="app"></main>
+      <aside id="room-chat" class="room-chat" aria-label="房间聊天" hidden>
+        <div class="chat-heading">
+          <div>
+            <h2>房间聊天</h2>
+            <small id="chat-members"></small>
+          </div>
+          <button
+            id="chat-toggle"
+            class="ghost small"
+            aria-expanded="false"
+            aria-controls="chat-body"
+          >
+            展开聊天
+          </button>
+        </div>
+        <div id="chat-body" hidden>
+          <ol
+            id="chat-messages"
+            class="chat-messages"
+            aria-live="polite"
+            aria-relevant="additions"
+          ></ol>
+          <form id="chat-form">
+            <input
+              id="chat-input"
+              class="text-input"
+              maxlength="300"
+              aria-label="聊天内容"
+              placeholder="说点什么…（最多300字）"
+              autocomplete="off"
+            />
+            <button class="primary small" type="submit">发送</button>
+          </form>
+          <p id="chat-error" class="chat-error" role="status"></p>
+        </div>
+      </aside>
+      <div id="turn-cue" class="turn-cue" role="status" aria-live="polite" hidden>
+        <div class="turn-cue-card">
+          <small>YOUR TURN</small><strong>轮到你了</strong><span id="turn-cue-detail"></span>
+        </div>
+      </div>
       <footer class="footer">
         © 2026 Many Fish 贡献者 · 无担保 ·
         <a href="/LICENSE" target="_blank" rel="noopener">GPLv3：可按许可证再分发</a> ·
@@ -61,7 +102,7 @@
         鲸先选择敌牌，再选择它的一次耗点行动，全部共耗1点。被操控牌位置与射程不变；普通攻击和袋鼠落击可打双方其他牌，鲨鱼可选择双方的一排并在所选阵营内追击。免费技能不能使用。
       </p>
       <p>
-        企鹅挡伤会暂停结算，等待防守方选择。海星可复活双方弃牌堆的牌；翻车鱼和螃蟹可消耗最后一点生命发动技能。每张翻车鱼每回合最多发动一次治疗，不同牌分别计次。
+        企鹅挡伤会暂停结算，等待防守方选择。海星可复活双方弃牌堆的牌；翻车鱼和螃蟹可消耗最后一点生命发动技能。每张翻车鱼和每张螃蟹每回合最多发动一次技能，不同牌分别计次。
       </p>
       <p>点击场上牌查看详情；选择己方牌操作，点击手牌选择上场或一次性效果。</p>
       <p class="muted">

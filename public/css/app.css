@@ -1614,3 +1614,143 @@ dialog h2 {
     font-size: 14px;
   }
 }
+
+/* Room chat, observer board and turn announcement */
+.room-chat {
+  width: 100%;
+  margin-top: 20px;
+  border: 1px solid #579d9e;
+  border-radius: 16px;
+  background: #0c2938;
+  padding: 14px;
+}
+.room-chat[hidden],
+#chat-body[hidden],
+.turn-cue[hidden] {
+  display: none;
+}
+.chat-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.chat-heading h2 {
+  margin: 0 0 5px;
+  font-size: 15px;
+}
+.chat-heading small {
+  color: #9bbec1;
+  font-size: 11px;
+}
+.chat-messages {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0 4px;
+  height: min(245px, 38vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.chat-messages:empty::before {
+  content: '还没有消息，玩家和观众都可以发言。';
+  color: #9bbec1;
+  font-size: 12px;
+}
+.chat-messages li {
+  border-bottom: 1px solid #365260;
+  padding: 9px 0;
+}
+.chat-messages strong {
+  color: #9edcd3;
+  font-size: 11px;
+}
+.chat-messages p {
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 5px 0 0;
+  line-height: 1.5;
+}
+#chat-form {
+  display: flex;
+  gap: 8px;
+}
+#chat-form input {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+}
+.chat-error {
+  min-height: 14px;
+  margin: 8px 0 0;
+  color: #edb49a;
+  font-size: 11px;
+}
+.spectator-screen .hand-heading {
+  margin-top: 14px;
+}
+.spectator-note {
+  color: #a8d7d0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.turn-cue {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 150;
+  pointer-events: none;
+}
+.turn-cue-card {
+  display: grid;
+  gap: 10px;
+  text-align: center;
+  padding: 30px 60px;
+  border: 1px solid #aae5cd;
+  background: linear-gradient(120deg, #123e50ed, #256461ed);
+  border-radius: 24px;
+  box-shadow: 0 0 90px #7adbc955;
+  animation: turn-arrival 1.8s both;
+}
+.turn-cue-card small {
+  letter-spacing: 6px;
+  color: #b7e9d3;
+}
+.turn-cue-card strong {
+  font-size: 38px;
+  color: #f9f0c4;
+}
+.turn-cue-card span {
+  color: #c4e6e1;
+  font-size: 13px;
+}
+.my-turn .arena {
+  animation: arena-turn-glow 1.1s 2;
+}
+@keyframes turn-arrival {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.9);
+  }
+  18%,
+  76% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-12px) scale(1.03);
+  }
+}
+@keyframes arena-turn-glow {
+  50% {
+    box-shadow: 0 0 40px #81d6be66;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .turn-cue-card,
+  .my-turn .arena {
+    animation: none;
+  }
+}

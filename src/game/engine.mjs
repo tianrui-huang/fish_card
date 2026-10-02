@@ -566,6 +566,8 @@ function applyMove(g, i, a, controlled = false, chain = []) {
     return;
   }
   if (type === 'crab') {
+    if (src.c.crabSkillRound === g.round) fail('这张螃蟹本回合已经发动过技能。');
+    src.c.crabSkillRound = g.round;
     src.c.hp--;
     g.ap++;
     log(g, `${p.name}的螃蟹换得1点额外行动点。`);
@@ -793,13 +795,15 @@ export function view(g, i) {
     rpsReady: !!p.rps,
   });
   const players = g.players.map(safe);
-  players[i].hand = g.players[i].hand;
+  const participant = i === 0 || i === 1;
+  if (participant) players[i].hand = g.players[i].hand;
   return {
     code: g.code,
     phase: g.phase,
     players,
     covering: g.covering || [],
-    you: i,
+    you: participant ? i : null,
+    role: participant ? 'player' : 'spectator',
     turn: g.turn,
     first: g.first,
     setup: g.setup,
