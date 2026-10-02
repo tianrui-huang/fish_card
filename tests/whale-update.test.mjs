@@ -1,29 +1,44 @@
+// Copyright (C) 2026 Tide Card contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { act, createGame, joinGame, CARDS } from '../engine.mjs';
+import { act, createGame, joinGame, CARDS } from '../src/game/engine.mjs';
 
 const unit = (id, type, hp = CARDS[type].hp, extra = {}) => ({ id, type, hp, sleep: 0, ...extra });
 function battle() {
   const g = createGame('鲸方');
   joinGame(g, '对手');
   Object.assign(g, { phase: 'battle', turn: 0, ap: 2, round: 1 });
-  for (const p of g.players) { p.field = [null, null, null, null]; p.hand = [{ id: `spare${p.name}`, type: 'crab' }]; p.discard = []; }
+  for (const p of g.players) {
+    p.field = [null, null, null, null];
+    p.hand = [{ id: `spare${p.name}`, type: 'crab' }];
+    p.discard = [];
+  }
   g.players[0].field[0] = unit('whale', 'whale');
   return g;
 }
-const control = (g, src, action) => act(g, 0, { type: 'control', actorId: 'whale', targetId: src, action: { ...action, actorId: src } });
+const control = (g, src, action) =>
+  act(g, 0, {
+    type: 'control',
+    actorId: 'whale',
+    targetId: src,
+    action: { ...action, actorId: src },
+  });
 
 test('鲸操控普通攻击和落击可打双方其他牌，来源与位置保持原样', () => {
-  for (const targetPlayer of [0, 1]) for (const landing of [false, true]) {
-    const g = battle(), type = landing ? 'kangaroo' : 'crab';
-    g.players[1].field[0] = unit('src', type, 2, landing ? { airborne: true, gravity: 1 } : {});
-    g.players[targetPlayer].field[1] = unit('target', 'penguin');
-    control(g, 'src', { type: landing ? 'skill' : 'attack', targetId: 'target' });
-    assert.equal(g.players[targetPlayer].field[1].hp, landing ? 1 : 2);
-    assert.equal(g.players[1].field[0].id, 'src');
-    assert.equal(g.ap, 1);
-    assert.equal(g.pending, null);
-  }
+  for (const targetPlayer of [0, 1])
+    for (const landing of [false, true]) {
+      const g = battle(),
+        type = landing ? 'kangaroo' : 'crab';
+      g.players[1].field[0] = unit('src', type, 2, landing ? { airborne: true, gravity: 1 } : {});
+      g.players[targetPlayer].field[1] = unit('target', 'penguin');
+      control(g, 'src', { type: landing ? 'skill' : 'attack', targetId: 'target' });
+      assert.equal(g.players[targetPlayer].field[1].hp, landing ? 1 : 2);
+      assert.equal(g.players[1].field[0].id, 'src');
+      assert.equal(g.ap, 1);
+      assert.equal(g.pending, null);
+    }
 });
 
 test('鲸操控鲨鱼默认打鲸方敌人，追击不攻击鲨鱼自身或鲸方', () => {
@@ -69,7 +84,10 @@ test('鲸操控鲨鱼仍遵守射程、睡眠和不能攻击自己的限制', ()
 test('未被操控的鲨鱼不能通过目标阵营参数攻击自己的牌', () => {
   const g = battle();
   g.players[0].field[1] = unit('shark', 'shark');
-  assert.throws(() => act(g, 0, { type: 'skill', actorId: 'shark', row: 0, targetPlayer: 0 }), /阵营/);
+  assert.throws(
+    () => act(g, 0, { type: 'skill', actorId: 'shark', row: 0, targetPlayer: 0 }),
+    /阵营/,
+  );
   g.players[1].field[0] = unit('borrowed', 'shark');
   assert.throws(() => control(g, 'borrowed', { type: 'skill', row: 0, targetPlayer: 7 }), /阵营/);
 });

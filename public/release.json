@@ -1,12 +1,16 @@
 {
   "protocol": 1,
-  "version": "2026.10.01.2",
-  "releaseId": "4af15bf4a1ccc786dfa3d81b3aa5d149ada5d892c8f992374509cfabfaedf249",
-  "rulesHash": "ef1fd44a8d01314c67a960e846576a01648200c9ed0313620e6b707853b480ec",
+  "version": "0.1.0-demo.1",
+  "releaseId": "1b6c95c5f83404718f5c448bb53925883cb111d3370a413f1372cf3df15c098c",
+  "rulesHash": "b971ae2e2deb8f19159d39290a7d4add6a516ad24064588e65e4bae1e1d21e43",
   "files": {
-    "/index.html": "e68e35ae2097dba4a1ee67371e3de8b8efa43d399543f9a90bb83e46f29cb57f",
-    "/app.js": "9d33867232285f30a04a23f9ed89ffa3dc42e5d8e1b1f358fe1d9133ec55df16",
-    "/app.css": "7318df60b62177bfa4abbf961266c8ecd68051fc788822e57b0cbb2a765c5c57",
-    "/integrity.mjs": "097a9c76da8bfb3ccfdb24f03139f08666bb96c07766b4228bc26e480d0070f3"
+    "/index.html": "4a43832a9d7ab046cb4758537ce9696984bafc6a003847bbd6466c76fc723056",
+    "/css/app.css": "fc7fdb9ee7a23de6e80cc207a6743515fdc5f359e632dc6cbd3b269e79826822",
+    "/js/app.js": "f9b76f1cb0c03fabeee8bfe69bca1e0a6dfc5829dc2074d1ef78bbea79945b34",
+    "/js/config.mjs": "603ab71db7c8d0d8e10484e4ddd6143766e411c6f693a1694f5149f798b62a5a",
+    "/js/cards.mjs": "680cbbb94ee2dbd2e92f64459ead232468991854111e21d27d0fc13f778a8eee",
+    "/js/network.mjs": "471b2a6f7dabe50b74f4b28a356f0cd4755d6e5c71c7973afff8ccb1a20f9d1b",
+    "/js/integrity.mjs": "5919b8870bccf98b5a912357b91ad760d8028af79b8dc4ee00f095db77d40e59",
+    "/js/sha256.mjs": "6191a7af61cfc7760e7374dc748b549171c04da0e5900dca391f066215dbe493"
   }
 }

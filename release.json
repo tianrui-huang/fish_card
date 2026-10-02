@@ -1,16 +1,26 @@
 {
   "protocol": 1,
-  "version": "2026.10.01.2",
+  "version": "0.1.0-demo.1",
   "files": {
-    "server.mjs": "793e0acd5ef58f5d0ab05bb83514fce8d1ef4777b191edd357ef1ec1d83a3432",
-    "room-store.mjs": "050fab1a979990191552b659565deee7527d2b033426798776f1f36917cdce36",
-    "engine.mjs": "ef1fd44a8d01314c67a960e846576a01648200c9ed0313620e6b707853b480ec",
-    "release-integrity.mjs": "9357fbc93f300cd6b87403bd91600d9f4b98f4f0c0e38b04b1d9874de7f824ba",
-    "public/index.html": "e68e35ae2097dba4a1ee67371e3de8b8efa43d399543f9a90bb83e46f29cb57f",
-    "public/app.js": "9d33867232285f30a04a23f9ed89ffa3dc42e5d8e1b1f358fe1d9133ec55df16",
-    "public/app.css": "7318df60b62177bfa4abbf961266c8ecd68051fc788822e57b0cbb2a765c5c57",
-    "public/integrity.mjs": "097a9c76da8bfb3ccfdb24f03139f08666bb96c07766b4228bc26e480d0070f3",
-    "public/release.json": "d7e1be065c9082ab8991af10434b8d8d2ed0030e3f0380dcff6d6492798b18f9"
+    "server.mjs": "558b3669142a87c747f8adccb08e3ddde882f97c18ab3216c0e33e5e3b281166",
+    "src/release-files.mjs": "14c2e9ee0707a2b71c228b0d0215a91d197530ccb6e56a5333c00b1649e7c043",
+    "src/game/cards.mjs": "cbb75e8c4bd6e0e8f5e081cf2fb4a80a8d98db06188967f46e5a66289aa85b56",
+    "src/game/deck.mjs": "006144ef647334120770b7c22903dc88f24aadd5d578d88c7aca0c3cca51ec37",
+    "src/game/engine.mjs": "a4e3ad1404f689e4076ec7589643220ec9c8c4ee38f345aa266175a8901e3e5f",
+    "src/server/http.mjs": "134d874594a3f9b35e498f0768bd1547ffa40a3ac76470099204a2a77c305f30",
+    "src/server/rooms.mjs": "2c815f7ec9b6aca9715a9601c984d9e0d8596edc591c0e683c8e2e7ce4ca0d58",
+    "src/server/events.mjs": "ab3c17bad8e98c3387100b30e8ee0a3f0053111a858a65ec08913a94becf43bf",
+    "src/server/release.mjs": "aea6205c70c4a40639ef21e79db5a3f6f93279802b9b7b128fe096bec131fcf6",
+    "LICENSE": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    "public/index.html": "4a43832a9d7ab046cb4758537ce9696984bafc6a003847bbd6466c76fc723056",
+    "public/css/app.css": "fc7fdb9ee7a23de6e80cc207a6743515fdc5f359e632dc6cbd3b269e79826822",
+    "public/js/app.js": "f9b76f1cb0c03fabeee8bfe69bca1e0a6dfc5829dc2074d1ef78bbea79945b34",
+    "public/js/config.mjs": "603ab71db7c8d0d8e10484e4ddd6143766e411c6f693a1694f5149f798b62a5a",
+    "public/js/cards.mjs": "680cbbb94ee2dbd2e92f64459ead232468991854111e21d27d0fc13f778a8eee",
+    "public/js/network.mjs": "471b2a6f7dabe50b74f4b28a356f0cd4755d6e5c71c7973afff8ccb1a20f9d1b",
+    "public/js/integrity.mjs": "5919b8870bccf98b5a912357b91ad760d8028af79b8dc4ee00f095db77d40e59",
+    "public/js/sha256.mjs": "6191a7af61cfc7760e7374dc748b549171c04da0e5900dca391f066215dbe493",
+    "public/release.json": "666a4f8b0d9dd631d8726a8372276ca5e5d35003d9c45c8608afa6f35e597f60"
   },
-  "releaseId": "4af15bf4a1ccc786dfa3d81b3aa5d149ada5d892c8f992374509cfabfaedf249"
+  "releaseId": "1b6c95c5f83404718f5c448bb53925883cb111d3370a413f1372cf3df15c098c"
 }

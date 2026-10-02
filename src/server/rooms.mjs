@@ -1,8 +1,14 @@
+// Copyright (C) 2026 Tide Card contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { randomBytes } from 'node:crypto';
-import { createGame, joinGame } from './engine.mjs';
+import { createGame, joinGame } from '../game/engine.mjs';
 
 export class RoomStore {
-  constructor({ codeGenerator = () => randomBytes(3).toString('hex').toUpperCase(), onClose = () => {} } = {}) {
+  constructor({
+    codeGenerator = () => randomBytes(3).toString('hex').toUpperCase(),
+    onClose = () => {},
+  } = {}) {
     this.rooms = new Map();
     this.tokens = new Map();
     this.codeGenerator = codeGenerator;
@@ -24,7 +30,9 @@ export class RoomStore {
 
   addToken(g, i) {
     let token;
-    do { token = randomBytes(24).toString('hex'); } while (this.tokens.has(token));
+    do {
+      token = randomBytes(24).toString('hex');
+    } while (this.tokens.has(token));
     this.tokens.set(token, { code: g.code, i });
     return { token, code: g.code };
   }
@@ -37,7 +45,11 @@ export class RoomStore {
   }
 
   join(code, name) {
-    const g = this.rooms.get(String(code || '').trim().toUpperCase());
+    const g = this.rooms.get(
+      String(code || '')
+        .trim()
+        .toUpperCase(),
+    );
     if (!g) throw Error('找不到房间。');
     joinGame(g, name);
     return this.addToken(g, 1);
@@ -46,7 +58,8 @@ export class RoomStore {
   session(token) {
     const s = this.tokens.get(token);
     const g = s && this.rooms.get(s.code);
-    if (!g) throw Object.assign(Error('房间已关闭或服务已重启。'), { status: 410, code: 'ROOM_CLOSED' });
+    if (!g)
+      throw Object.assign(Error('房间已关闭或服务已重启。'), { status: 410, code: 'ROOM_CLOSED' });
     return { g, i: s.i };
   }
 

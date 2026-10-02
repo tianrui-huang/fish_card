@@ -1,0 +1,8 @@
+node_modules/
+dist/
+third_party/
+release.json
+public/release.json
+LICENSE
+*.zip
+*.msi

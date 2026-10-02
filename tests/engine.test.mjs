@@ -1,6 +1,9 @@
+// Copyright (C) 2026 Tide Card contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { act, createGame, joinGame, view } from '../engine.mjs';
+import { act, createGame, joinGame, view } from '../src/game/engine.mjs';
 
 function battle() {
   const game = createGame('甲');

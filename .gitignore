@@ -1,9 +1,11 @@
 node_modules/
+dist/
 .env
 .env.*
 *.log
 fish-windows-*.zip
 fish-server-*.zip
+fish-source*.zip
 Thumbs.db
 .DS_Store
 node-v*-*.msi

@@ -1,4 +1,6 @@
 @echo off
+rem Copyright (C) 2026 Tide Card contributors
+rem SPDX-License-Identifier: GPL-3.0-only
 setlocal EnableExtensions
 chcp 65001 >nul
 cd /d "%~dp0"
@@ -15,7 +17,7 @@ call :find_node
 if not errorlevel 1 goto run
 
 :offline_install
-set "NODE_INSTALLER=%~dp0node-v24.21.0-x64.msi"
+set "NODE_INSTALLER=%~dp0third_party\nodejs\node-v24.21.0-x64.msi"
 if not exist "%NODE_INSTALLER%" goto missing_installer
 echo WinGet is unavailable or did not install a usable runtime. Using the bundled Node.js installer.
 echo An administrator confirmation may appear. No Internet connection is needed for this installer.
@@ -57,7 +59,7 @@ pause
 exit /b %GAME_EXIT%
 
 :missing_installer
-echo WinGet is unavailable or failed, and node-v24.21.0-x64.msi is missing from this folder.
+echo WinGet is unavailable or failed, and node-v24.21.0-x64.msi is missing from third_party\nodejs.
 echo Extract the complete distribution ZIP, or install Node.js LTS from https://nodejs.org/en/download/ and run this file again.
 pause
 exit /b 1
