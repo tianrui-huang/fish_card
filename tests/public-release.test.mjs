@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Tide Card contributors
+// Copyright (C) 2026 Many Fish contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
 import test from 'node:test';

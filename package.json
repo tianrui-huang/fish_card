@@ -1,8 +1,8 @@
 {
-  "name": "tide-card-demo",
-  "version": "0.1.0-demo.1",
+  "name": "many-fish-demo",
+  "version": "0.1.0-demo.2",
   "private": true,
-  "description": "潮汐卡牌：双人浏览器卡牌游戏 Demo",
+  "description": "Many Fish：双人浏览器卡牌游戏 Demo",
   "type": "module",
   "license": "GPL-3.0-only",
   "engines": {

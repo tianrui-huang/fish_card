@@ -1,5 +1,5 @@
 @echo off
-rem Copyright (C) 2026 Tide Card contributors
+rem Copyright (C) 2026 Many Fish contributors
 rem SPDX-License-Identifier: GPL-3.0-only
 setlocal EnableExtensions
 chcp 65001 >nul

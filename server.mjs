@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Tide Card contributors
+// Copyright (C) 2026 Many Fish contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
 import { fileURLToPath } from 'node:url';
@@ -22,7 +22,7 @@ export function startServer() {
     };
     const onListening = () => {
       server.removeListener('error', onError);
-      console.log(`潮汐卡牌已启动： http://localhost:${candidate}`);
+      console.log(`Many Fish 已启动： http://localhost:${candidate}`);
       if (host === '0.0.0.0')
         for (const list of Object.values(os.networkInterfaces()))
           for (const n of list || [])

@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Tide Card contributors
+// Copyright (C) 2026 Many Fish contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
 import http from 'node:http';
@@ -78,7 +78,7 @@ export function createServer() {
       if (u.pathname === '/api/health' && req.method === 'GET') {
         send(res, 200, {
           ok: true,
-          service: 'tide-card-game',
+          service: 'many-fish-game',
           version: release.client.version,
           releaseId: release.client.releaseId,
           integrity: 'verified',

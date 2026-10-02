@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Tide Card contributors
+// Copyright (C) 2026 Many Fish contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
 import test from 'node:test';
@@ -19,7 +19,7 @@ test('LAN HTTP SHA-256 fallback matches standard vectors and multi-block binary 
   for (const bytes of [
     new Uint8Array(),
     new TextEncoder().encode('abc'),
-    new TextEncoder().encode('潮汐卡牌'.repeat(1000)),
+    new TextEncoder().encode('海洋卡牌'.repeat(1000)),
     new Uint8Array(Array.from({ length: 65537 }, (_, i) => i % 256)),
   ]) {
     const expected = createHash('sha256').update(bytes).digest('hex');
