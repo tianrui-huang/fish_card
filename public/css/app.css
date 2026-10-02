@@ -1615,6 +1615,35 @@ dialog h2 {
   }
 }
 
+/* Downloaded updates remain separate from the running game. */
+#client-update {
+  max-width: 620px;
+}
+#update-message {
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+#update-progress {
+  width: 100%;
+  height: 16px;
+  accent-color: #72d3c0;
+  margin: 12px 0 20px;
+}
+.update-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.update-actions a {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+.update-actions [hidden],
+#update-progress[hidden] {
+  display: none;
+}
+
 /* Room chat, observer board and turn announcement */
 .room-chat {
   width: 100%;

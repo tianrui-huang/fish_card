@@ -9,7 +9,9 @@ import { RoomStore } from './rooms.mjs';
 import { loadRelease, ReleaseGate } from './release.mjs';
 
 import { readFile } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
 import { createRoomEvents } from './events.mjs';
+import { createClientUpdater, isLocalUpdateRequest } from './client-update.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const mime = {
@@ -41,10 +43,11 @@ const readBody = async (req) => {
   }
   return JSON.parse(text || '{}');
 };
-export function createServer() {
+export function createServer({ updater } = {}) {
   // Validate the shipped baseline once; serve those verified bytes for this process's lifetime.
   const release = loadRelease(root),
     gate = new ReleaseGate(release.client);
+  updater ||= createClientUpdater({ root, version: release.client.version });
   let store;
   const { broadcast, addStream, closeRoom, closeViewer } = createRoomEvents({
     snapshot: (g, i) => store.snapshot(g, i),
@@ -76,6 +79,46 @@ export function createServer() {
       if (req.method === 'OPTIONS') {
         res.writeHead(204);
         res.end();
+        return;
+      }
+      if (u.pathname.startsWith('/api/client-update')) {
+        res.removeHeader('Access-Control-Allow-Origin');
+        if (!isLocalUpdateRequest(req)) {
+          send(res, 403, { error: '自动下载仅允许本机游戏页面使用。', code: 'LOCAL_UPDATE_ONLY' });
+          return;
+        }
+        if (u.pathname === '/api/client-update' && req.method === 'POST') {
+          const b = await readBody(req);
+          send(res, 200, updater.start(b.version));
+          return;
+        }
+        if (u.pathname === '/api/client-update' && req.method === 'GET') {
+          send(res, 200, updater.status());
+          return;
+        }
+        if (u.pathname === '/api/client-update/download' && req.method === 'GET') {
+          const file = updater.file(u.searchParams.get('id'));
+          if (!file) {
+            send(res, 404, { error: '更新包尚未就绪，请重试。' });
+            return;
+          }
+          const stream = createReadStream(file.path);
+          stream.on('error', () => {
+            if (!res.headersSent) send(res, 404, { error: '更新包已被移走，请重新下载。' });
+            else res.destroy();
+          });
+          stream.once('open', () => {
+            res.writeHead(200, {
+              'Content-Type': 'application/zip',
+              'Content-Disposition': `attachment; filename="${file.name}"`,
+              'Cache-Control': 'no-store',
+            });
+            stream.pipe(res);
+          });
+          res.on('close', () => stream.destroy());
+          return;
+        }
+        send(res, 405, { error: '方法不支持。' });
         return;
       }
       if (u.pathname === '/api/health' && req.method === 'GET') {

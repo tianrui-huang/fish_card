@@ -14,6 +14,7 @@ export const RUNTIME_FILES = [
   'src/server/rooms.mjs',
   'src/server/events.mjs',
   'src/server/release.mjs',
+  'src/server/client-update.mjs',
   'LICENSE',
   ...CLIENT_FILES.map((file) => 'public' + file),
 ];

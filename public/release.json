@@ -1,16 +1,18 @@
 {
   "protocol": 1,
-  "version": "0.1.0-demo.3",
-  "releaseId": "65acbbf8199c962c062c0445bde47478211961dc0811cb15b828e05ef71442d0",
+  "version": "0.1.0-demo.4",
+  "releaseId": "fb91ad40f28e48842b170ec299e17afe61ae5a06fff74ab87ebd4b1c28de8b9e",
   "rulesHash": "92fc2e5dde64780a6fbcbfd57e81305b3d8305b6d34e10800ae7aedf1b37c6b0",
   "files": {
-    "/index.html": "2542d3a28fd80c6628ba1291233ca7514daf662fd1a7faf2c79fcb6e64217366",
-    "/css/app.css": "47127549b265ee0f181c8c644f394eefd489a969fbdc6674be2e3df3e938d873",
-    "/js/app.js": "3b2c6051dde3ab0bcf6e24beeee1033607e9408b0c0ea08bb3b7c79416826037",
-    "/js/config.mjs": "e4b153a4f08db6dbd1fd0dd77b8e4169de9faefca97dcacd7eb1cf4027e267fa",
+    "/index.html": "5e35bf4ec592fa98aa28a42c01e0348fc5d60c5d4aad1ce012d3fc79b308fca2",
+    "/css/app.css": "23a0ffe26b3cb871eb33a809d707c4661e21c5d2f5e56ef5bd865a85c2d2806e",
+    "/js/app.js": "a87102558dbd2b781dc862670b5a97a5857ef99439eaf61594ca491bdcae1d85",
+    "/js/config.mjs": "d93630852a05277f5bbd894a0e298eb88504763b8b0196113e0e34f1b6b124a2",
     "/js/cards.mjs": "0daa96cbaa1c389b95f8032a3488475af7a2e78ff79a1262873224c55b38f848",
     "/js/network.mjs": "0f743157460b8751aa8173fb230cca61451d3dbafb4c1de3694d141db7db0e3c",
     "/js/chat.mjs": "b2bb195d1cc04018711e2857abf2094a352c55bb971d624e8605acd7709f747b",
+    "/js/update.mjs": "0a14cd7a11514e79b91fff05e71889117523b96556bc821ecf37972c74877e4f",
+    "/js/update-ui.mjs": "aa777ad38e0545422adf49817098160a4d2e33a06909412d2c995004c9425c11",
     "/js/integrity.mjs": "215e5846bfb5021c6d9efcd02196dae2c31a06312069cc6011a7883189dd3c09",
     "/js/sha256.mjs": "a8cc07101d2d5e40182cba32b83558bd6e836cfbe4c3ee963cf257d974e419f9"
   }

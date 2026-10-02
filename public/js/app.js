@@ -6,6 +6,7 @@ import { OFFICIAL_SERVER, CLIENT_VERSION } from './config.mjs';
 import { FALLBACK_CARDS, art } from './cards.mjs';
 import { requestJSON } from './network.mjs';
 import { createRoomChat } from './chat.mjs';
+import { createUpdateUI } from './update-ui.mjs';
 
 // DOM, local room state and selected actions
 const app = document.querySelector('#app');
@@ -13,6 +14,7 @@ const roomChip = document.querySelector('#room-chip');
 const connection = document.querySelector('#connection');
 const toast = document.querySelector('#toast');
 const roomChat = createRoomChat((text) => post('/api/chat', { token, text }));
+const clientUpdate = createUpdateUI();
 const turnCue = document.querySelector('#turn-cue');
 let turnCueTimer;
 const isSpectator = () => state?.role === 'spectator';
@@ -140,6 +142,7 @@ function apiRoot() {
   return url.origin.replace(/\/$/, '');
 }
 async function verifyClient(base) {
+  await clientUpdate.check(base);
   connection.textContent = '正在校验客户端';
   const proof = await inspectClient(window.location.origin);
   let r;

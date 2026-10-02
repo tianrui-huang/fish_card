@@ -70,6 +70,22 @@
       </footer>
     </div>
     <div id="toast" class="toast" role="status"></div>
+    <dialog id="client-update" aria-labelledby="update-title">
+      <div class="hero-eyebrow">CLIENT UPDATE</div>
+      <h2 id="update-title">客户端更新</h2>
+      <p id="update-message" role="status" aria-live="polite"></p>
+      <progress id="update-progress" aria-label="更新包下载进度" hidden></progress>
+      <div class="update-actions">
+        <button id="update-retry" class="primary" hidden>重试自动下载</button>
+        <a id="update-save" class="primary" hidden>保存更新包</a>
+        <a id="update-play" class="secondary" target="_blank" rel="noopener">直接在官方网页试玩</a>
+        <a id="update-release" class="ghost" target="_blank" rel="noopener">打开发布页面</a>
+        <button id="update-dismiss" class="ghost">返回大厅</button>
+      </div>
+      <p class="muted">
+        关闭窗口不会删除已下载的更新包。本地下载可在后台完成；游戏源码和对局不会被自动覆盖。
+      </p>
+    </dialog>
     <dialog id="room-menu" aria-labelledby="room-menu-title">
       <button id="room-menu-close" class="dialog-close" aria-label="关闭">×</button>
       <div class="hero-eyebrow">ROOM OPTIONS</div>
